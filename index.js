@@ -4,7 +4,10 @@ const fs = require('fs');
 
 (async () => {
     // Brauzerni ochamiz (headless: false bo'lishi shart, bizga UI kerak)
-    const browser = await chromium.launch({ headless: false });
+    const browser = await chromium.launch({
+        headless: false,
+        channel: "chrome"
+    });
     const sessionFile = 'auth_admin.json';
     let context;
     let page;
