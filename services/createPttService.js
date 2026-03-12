@@ -1,5 +1,5 @@
-async function createPtt(page, student) {
-
+async function createPttService(page, student) {
+    let pttId = null;
     console.log(`Sahifaga o'tilmoqda: https://hemis.isft.uz/performance/ptt-edit?student=${student.id}`);
 
     try {
@@ -69,11 +69,11 @@ async function createPtt(page, student) {
         console.log("Semestr tanlandi");
 
         // Ajax yuklanishini kutish
-        await page.waitForTimeout(3000);
+        await page.waitForSelector('.ptt-items');
 
         // Fanlarni tanlash
         const rows = page.locator('tr[data-key]', {
-            has: page.locator(`td:text("${student.semester_name}")`)
+            has: page.locator('td', { hasText: student.semester_name })
         });
         const rowsCount = await rows.count();
         let disabledItemsCount = 0;
@@ -95,14 +95,34 @@ async function createPtt(page, student) {
             }
         }
 
-        if (rowsCount !== disabledItemsCount) {
+        if (rowsCount > disabledItemsCount) {
             console.log(`PTT tayyor: ${student.id}`);
 
-            // Agar kerak bo‘lsa
-            // await page.locator('button[type="submit"]').click();
+            page.once('dialog', async dialog => {
+                await dialog.accept();
+            });
+
+            await Promise.all([
+                page.waitForURL('**ptt-edit?ptt=*'),
+                page.locator('button[type="submit"]').click()
+            ]);
+
+            const url = page.url();
+
+            pttId = new URL(url).searchParams.get('ptt');
+
+            if (!pttId) {
+                return {
+                    success: false,
+                    pttId: null,
+                    message: "PTT ID aniqlanmadi"
+                };
+            }
+
+            console.log("PTT ID:", pttId);
         } else {
             console.log(`disabledItemsCount: ${disabledItemsCount}`);
-            return false;
+            return { success: false, pttId: null, message: "Bu talaba uchun qaydnoma yaratib bo'lmaydi"};
         }
 
     } catch (error) {
@@ -111,7 +131,7 @@ async function createPtt(page, student) {
         throw error;
     }
 
-    return true;
+    return { success: true, pttId: pttId, message: "OK"};
 }
 
-module.exports = createPtt;
+module.exports = createPttService;

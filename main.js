@@ -3,6 +3,7 @@ const fs = require('fs');
 const students = require('./data/students.json');
 
 const createPttService = require('./services/createPttService');
+const editPttService = require('./services/editPttService');
 const checkPttService = require('./services/checkPttService');
 const fillPttService = require('./services/fillPttService');
 
@@ -39,14 +40,14 @@ const fillPttService = require('./services/fillPttService');
             console.log(`Talaba: ${student.id}`);
 
             // 1 bosqich
-            const createPtt = await createPttService(adminPage, student);
+            const createResult = await createPttService(adminPage, student);
 
-            if (!createPtt) {
+            if (!createResult.success) {
                 console.log(`PTT yaratilmadi: ${student.id}`);
 
                 const log = {
                     studentId: student.id,
-                    reason: "Bu talaba uchun qaydnoma yaratib bo'lmaydi",
+                    reason: createResult.message,
                     time: new Date().toISOString()
                 };
 
@@ -57,6 +58,11 @@ const fillPttService = require('./services/fillPttService');
 
                 continue;
             }
+
+            const editResult = await editPttService(adminPage, student, createResult.pttId);
+
+            console.log(`PTT editResult: ${editResult.message}`);
+
 
             // 2 bosqich
             // await checkPttService(approverPage, student.id);
