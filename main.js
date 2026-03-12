@@ -40,27 +40,27 @@ const fillPttService = require('./services/fillPttService');
             console.log(`Talaba: ${student.id}`);
 
             // 1 bosqich
-            // const createResult = await createPttService(adminPage, student);
-            //
-            // if (!createResult.success) {
-            //     console.log(`PTT yaratilmadi: ${student.id}`);
-            //
-            //     const log = {
-            //         studentId: student.id,
-            //         reason: createResult.message,
-            //         time: new Date().toISOString()
-            //     };
-            //
-            //     fs.appendFileSync(
-            //         'logs/failed_students_first_step.jsonl',
-            //         JSON.stringify(log) + "\n"
-            //     );
-            //
-            //     continue;
-            // }
-            //
-            // const editResult = await editPttService(adminPage, student, createResult.pttId);
-            const editResult = await editPttService(adminPage, student, 884);
+            const createResult = await createPttService(adminPage, student);
+
+            if (!createResult.success) {
+                console.log(`PTT yaratilmadi: ${student.id}`);
+
+                const log = {
+                    studentId: student.id,
+                    reason: createResult.message,
+                    time: new Date().toISOString()
+                };
+
+                fs.appendFileSync(
+                    'logs/failed_students_first_step.jsonl',
+                    JSON.stringify(log) + "\n"
+                );
+
+                continue;
+            }
+
+            const editResult = await editPttService(adminPage, student, createResult.pttId);
+            // const editResult = await editPttService(adminPage, student, 884);
 
             if (!editResult.success) {
                 console.log(`PTT yaratilmadi: ${student.id}`);
