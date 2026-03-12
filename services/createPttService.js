@@ -1,11 +1,11 @@
-async function createPtt(page, studentId) {
+async function createPtt(page, student) {
 
-    console.log(`Sahifaga o'tilmoqda: https://hemis.isft.uz/performance/ptt-edit?student=${studentId}`);
+    console.log(`Sahifaga o'tilmoqda: https://hemis.isft.uz/performance/ptt-edit?student=${student.id}`);
 
     try {
 
         await page.goto(
-            `https://hemis.isft.uz/performance/ptt-edit?student=${studentId}`,
+            `https://hemis.isft.uz/performance/ptt-edit?student=${student.id}`,
             { waitUntil: 'domcontentloaded' }
         );
 
@@ -16,13 +16,12 @@ async function createPtt(page, studentId) {
             console.error("Sessiya tugagan. login.js ni qayta ishga tushiring.");
 
             throw new Error("SESSION_EXPIRED");
-
         }
 
         console.log("Ma'lumotlar to'ldirilmoqda...");
 
         // 1. Qaydnoma raqami
-        await page.fill('#estudentptt-number', studentId);
+        await page.fill('#estudentptt-number', student.id);
         console.log("Qaydnoma raqami yozildi");
 
         // 2. Sana
@@ -60,11 +59,12 @@ async function createPtt(page, studentId) {
         console.log("Mas'ul rahbar tanlandi");
 
         // 5. Oxirgi semestrni tanlash
-        const options = await page.$$('#estudentptt-_semester option');
+        await page.selectOption('select#estudentptt-_semester', { label: student?.semester_name });
 
-        const lastOption = await options[options.length - 1].getAttribute('value');
-
-        await page.selectOption('#estudentptt-_semester', lastOption);
+        // const options = await page.$$('#estudentptt-_semester option');
+        // const lastOption = await options[options.length - 1].getAttribute('value');
+        //
+        // await page.selectOption('#estudentptt-_semester', lastOption);
 
         console.log("Semestr tanlandi");
 
@@ -72,13 +72,19 @@ async function createPtt(page, studentId) {
         await page.waitForTimeout(3000);
 
         // Fanlarni tanlash
-        const checkboxes = page.locator('.ptt-items');
-        const checkboxesCount = await checkboxes.count();
+        const rows = page.locator('tr[data-key]', {
+            has: page.locator(`td:text("${student.semester_name}")`)
+        });
+        const rowsCount = await rows.count();
         let disabledItemsCount = 0;
 
-        for (let i = 0; i < checkboxesCount; i++) {
+        console.log(rowsCount);
 
-            const checkbox = checkboxes.nth(i);
+        for (let i = 0; i < rowsCount; i++) {
+
+            const row = rows.nth(i);
+
+            const checkbox = row.locator('.ptt-items');
 
             const isDisabled = await checkbox.isDisabled();
 
@@ -89,8 +95,8 @@ async function createPtt(page, studentId) {
             }
         }
 
-        if (checkboxesCount !== disabledItemsCount) {
-            console.log(`PTT tayyor: ${studentId}`);
+        if (rowsCount !== disabledItemsCount) {
+            console.log(`PTT tayyor: ${student.id}`);
 
             // Agar kerak bo‘lsa
             // await page.locator('button[type="submit"]').click();
@@ -100,7 +106,7 @@ async function createPtt(page, studentId) {
         }
 
     } catch (error) {
-        console.error(`PTT yaratishda xatolik (${studentId}):`, error);
+        console.error(`PTT yaratishda xatolik (${student.id}):`, error);
 
         throw error;
     }

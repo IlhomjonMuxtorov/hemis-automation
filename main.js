@@ -39,7 +39,7 @@ const fillPttService = require('./services/fillPttService');
             console.log(`Talaba: ${student.id}`);
 
             // 1 bosqich
-            const createPtt = await createPttService(adminPage, student.id);
+            const createPtt = await createPttService(adminPage, student);
 
             if (!createPtt) {
                 console.log(`PTT yaratilmadi: ${student.id}`);
