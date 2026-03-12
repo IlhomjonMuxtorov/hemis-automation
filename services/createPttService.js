@@ -9,25 +9,37 @@ async function createPtt(page, studentId) {
             { waitUntil: 'domcontentloaded' }
         );
 
+        const currentUrl = page.url();
+
+        if (currentUrl.includes('/dashboard/login')) {
+
+            console.error("Sessiya tugagan. login.js ni qayta ishga tushiring.");
+
+            throw new Error("SESSION_EXPIRED");
+
+        }
+
         console.log("Ma'lumotlar to'ldirilmoqda...");
 
         // 1. Qaydnoma raqami
-        await page.fill('#estudentptt-number', '1221');
+        await page.fill('#estudentptt-number', studentId);
         console.log("Qaydnoma raqami yozildi");
 
         // 2. Sana
-        await page.evaluate(() => {
+        const today = new Date().toISOString().split('T')[0];
+
+        await page.evaluate((date) => {
 
             const input = document.querySelector('#estudentptt-date');
 
             if (input) {
-                input.value = '2026-02-02';
+                input.value = date;
 
                 input.dispatchEvent(new Event('input', { bubbles: true }));
                 input.dispatchEvent(new Event('change', { bubbles: true }));
             }
 
-        });
+        }, today);
 
         console.log("Sana tanlandi");
 
@@ -42,7 +54,7 @@ async function createPtt(page, studentId) {
         // 4. Mas'ul rahbar
         await page.selectOption(
             '#estudentptt-_admin',
-            { label: 'RAVSHAN ISMATOV' }
+            { label: 'ANVAR TEMIROV' }
         );
 
         console.log("Mas'ul rahbar tanlandi");
@@ -61,28 +73,39 @@ async function createPtt(page, studentId) {
 
         // Fanlarni tanlash
         const checkboxes = page.locator('.ptt-items');
+        const checkboxesCount = await checkboxes.count();
+        let disabledItemsCount = 0;
 
-        const count = await checkboxes.count();
+        for (let i = 0; i < checkboxesCount; i++) {
 
-        for (let i = 0; i < count; i++) {
+            const checkbox = checkboxes.nth(i);
 
-            await checkboxes.nth(i).check();
+            const isDisabled = await checkbox.isDisabled();
 
+            if (!isDisabled) {
+                await checkbox.check();
+            } else {
+                disabledItemsCount++;
+            }
         }
 
-        console.log(`PTT tayyor: ${studentId}`);
+        if (checkboxesCount !== disabledItemsCount) {
+            console.log(`PTT tayyor: ${studentId}`);
 
-        // Agar kerak bo‘lsa
-        // await page.locator('button[type="submit"]').click();
+            // Agar kerak bo‘lsa
+            // await page.locator('button[type="submit"]').click();
+        } else {
+            console.log(`disabledItemsCount: ${disabledItemsCount}`);
+            return false;
+        }
 
     } catch (error) {
-
         console.error(`PTT yaratishda xatolik (${studentId}):`, error);
 
         throw error;
-
     }
 
+    return true;
 }
 
 module.exports = createPtt;

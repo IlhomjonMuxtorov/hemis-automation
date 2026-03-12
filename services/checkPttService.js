@@ -9,6 +9,16 @@ async function checkPttService(page, studentId) {
             { waitUntil: 'domcontentloaded' }
         );
 
+        const currentUrl = page.url();
+
+        if (currentUrl.includes('/dashboard/login')) {
+
+            console.error("Sessiya tugagan. login.js ni qayta ishga tushiring.");
+
+            throw new Error("SESSION_EXPIRED");
+
+        }
+
         console.log("PTT tekshirish sahifasi ochildi");
 
         await page.waitForTimeout(10000);
