@@ -78,8 +78,6 @@ async function createPttService(page, student) {
         const rowsCount = await rows.count();
         let disabledItemsCount = 0;
 
-        console.log(rowsCount);
-
         for (let i = 0; i < rowsCount; i++) {
 
             const row = rows.nth(i);
