@@ -77,15 +77,22 @@ async function createPttService(page, student) {
         await page.waitForSelector('.ptt-items');
 
         // Fanlarni tanlash
-        const rows = page.locator('tr[data-key]', {
-            has: page.locator('td', { hasText: student.semester_name })
-        });
+        const subjectIds = student.subjects.map(s => String(s.subject_id));
+
+        const rows = page.locator('tr[data-key]');
         const rowsCount = await rows.count();
+
         let disabledItemsCount = 0;
 
         for (let i = 0; i < rowsCount; i++) {
 
             const row = rows.nth(i);
+
+            const subjectId = await row.getAttribute('data-key');
+
+            if (!subjectIds.includes(subjectId)) {
+                continue;
+            }
 
             const checkbox = row.locator('.ptt-items');
 
