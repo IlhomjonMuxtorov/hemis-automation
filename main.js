@@ -24,14 +24,14 @@ const fillPttService = require('./services/fillPttService');
         storageState: 'sessions/auth_check.json'
     });
 
-    // const teacherContext = await browser.newContext({
-    //     storageState: 'sessions/auth_teacher.json'
-    // });
+    const teacherContext = await browser.newContext({
+        storageState: 'sessions/auth_teacher.json'
+    });
 
     // 3 ta page
     const adminPage = await adminContext.newPage();
     const checkPage = await checkContext.newPage();
-    // const teacherPage = await teacherContext.newPage();
+    const teacherPage = await teacherContext.newPage();
 
     try {
         const processedStudents = new Map();
@@ -46,7 +46,8 @@ const fillPttService = require('./services/fillPttService');
 
                 processedStudents.set(data.studentId, {
                     pttId: data.pttId,
-                    pttNumber: data.pttNumber
+                    pttNumber: data.pttNumber,
+                    subjects: data.subjects
                 });
             }
         }
@@ -111,6 +112,8 @@ const fillPttService = require('./services/fillPttService');
             console.log(`Talaba: ${student.id}`);
             let pttId = null;
             let pttNumber = null;
+            let subjects = [];
+            let editedSubjects = [];
 
             // 1-bosqich - Qaydnoma yaratish
             if (!processedStudents.has(student.id)) {
@@ -135,11 +138,13 @@ const fillPttService = require('./services/fillPttService');
 
                 pttId = createResult.pttId;
                 pttNumber = createResult.pttNumber;
+                subjects = createResult.subjects;
 
                 const successLog = {
                     studentId: student.id,
                     pttId: pttId,
                     pttNumber: pttNumber,
+                    subjects: subjects,
                     time: new Date().toISOString()
                 };
 
@@ -150,7 +155,8 @@ const fillPttService = require('./services/fillPttService');
 
                 processedStudents.set(student.id, {
                     pttId,
-                    pttNumber
+                    pttNumber,
+                    subjects: subjects
                 });
 
             } else {
@@ -158,6 +164,7 @@ const fillPttService = require('./services/fillPttService');
 
                 pttId = existing.pttId;
                 pttNumber = existing.pttNumber;
+                subjects = existing.subjects;
 
                 console.log(`1-bosqich tashlab o'tildi, sababi bu talaba uchun qaydnoma allaqachon yaratilgan edi. Talaba IDsi: ${student.id} Qaydnoma IDsi: ${pttId} Qaydnoma raqami: ${pttNumber}`);
             }
@@ -173,6 +180,7 @@ const fillPttService = require('./services/fillPttService');
                         studentId: student.id,
                         pttId: pttId,
                         pttNumber: pttNumber,
+                        editedSubjects: editResult.subjects,
                         reason: editResult.message,
                         time: new Date().toISOString()
                     };
@@ -185,10 +193,13 @@ const fillPttService = require('./services/fillPttService');
                     continue;
                 }
 
+                editedSubjects = editResult.subjects;
+
                 const successLog = {
                     studentId: student.id,
                     pttId: pttId,
                     pttNumber: pttNumber,
+                    editedSubjects: editedSubjects,
                     time: new Date().toISOString()
                 };
 
@@ -200,15 +211,15 @@ const fillPttService = require('./services/fillPttService');
                 editedPTTsList.set(pttId, {
                     studentId: student.id,
                     pttId: pttId,
-                    pttNumber: pttNumber
+                    pttNumber: pttNumber,
+                    editedSubjects: editedSubjects,
                 });
 
                 console.log(`Qaydnomaga o'qituvchi biriktirish tugatildi: ${editResult.message}`);
             } else {
-                // const existing = editedPTTsList.get(pttId);
-                //
-                // pttId = existing.pttId;
-                // pttNumber = existing.pttNumber;
+                const existing = editedPTTsList.get(pttId);
+
+                editedSubjects = existing.editedSubjects;
 
                 console.log(`2-bosqich tashlab o'tildi. Talaba IDsi: ${student.id} Qaydnoma IDsi: ${pttId} Qaydnoma raqami: ${pttNumber}`);
             }
@@ -299,10 +310,10 @@ const fillPttService = require('./services/fillPttService');
                     JSON.stringify(successLog) + "\n"
                 );
 
-                approvedPTTsList.set(pttId, {
+                checkedPTTsList.set(pttId, {
                     studentId: student.id,
                     pttId: pttId,
-                    pttNumber: pttNumber
+                    pttNumber: pttNumber,
                 });
 
                 console.log(`Qaydnomani tasdiqlash: ${checkResult.message}`);
@@ -314,6 +325,13 @@ const fillPttService = require('./services/fillPttService');
 
                 console.log(`4-bosqich tashlab o'tildi. Talaba IDsi: ${student.id} Qaydnoma IDsi: ${pttId} Qaydnoma raqami: ${pttNumber}`);
             }
+
+            console.log(pttId);
+            console.log(pttNumber);
+            console.log(subjects);
+            console.log(editedSubjects);
+
+            // await page.waitForTimeout(3000);
 
             // // 3 bosqich
             // await fillPttService(teacherPage, student.id);

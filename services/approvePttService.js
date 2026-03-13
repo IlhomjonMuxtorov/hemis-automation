@@ -4,7 +4,7 @@ async function approvePttService(page, student, pttId) {
     try {
         await page.goto(
             `https://hemis.isft.uz/performance/ptt`,
-            { waitUntil: 'domcontentloaded' }
+            {waitUntil: 'domcontentloaded'}
         );
 
         const currentUrl = page.url();
@@ -15,6 +15,8 @@ async function approvePttService(page, student, pttId) {
 
             throw new Error("SESSION_EXPIRED");
         }
+
+        console.log("Ma'lumotlar to'ldirilmoqda...");
 
         // Talabani qidirish
         const searchInput = page.locator('#estudentptt-search');
@@ -40,16 +42,13 @@ async function approvePttService(page, student, pttId) {
             page.waitForLoadState('networkidle'),
             row.locator('a.btn.btn-flat').click()
         ]);
-        console.log("Ma'lumotlar to'ldirilmoqda...");
-
-        // await page.waitForTimeout(30000);
     } catch (error) {
         console.error(`PTT yaratishda xatolik (${student.id}):`, error);
 
         throw error;
     }
 
-    return { success: true, pttId: pttId, message: "OK"};
+    return {success: true, pttId: pttId, message: "OK"};
 }
 
 module.exports = approvePttService;

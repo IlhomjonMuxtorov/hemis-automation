@@ -1,10 +1,11 @@
 async function editPttService(page, student, pttId) {
+    let subjects = [];
     console.log(`Sahifaga o'tilmoqda: https://hemis.isft.uz/performance/ptt-edit?ptt=${pttId}`);
 
     try {
         await page.goto(
             `https://hemis.isft.uz/performance/ptt-edit?ptt=${pttId}`,
-            { waitUntil: 'domcontentloaded' }
+            {waitUntil: 'domcontentloaded'}
         );
 
         const currentUrl = page.url();
@@ -24,6 +25,16 @@ async function editPttService(page, student, pttId) {
         for (let i = 0; i < rowsCount; i++) {
 
             const id = 2 * i + 1;
+
+            const subjectId = await rows.nth(i).getAttribute('data-key');
+            const subjectName = await rows.nth(i).locator('td').nth(1).textContent();
+            const semesterName = await rows.nth(i).locator('td').nth(2).textContent();
+
+            subjects.push({
+                id: Number(subjectId),
+                name: subjectName?.trim(),
+                semesterName: semesterName?.trim(),
+            });
 
             // Agar qo'lda tanlangan bo'lsa, uni tashlab o'tib ketish.
             const selected = await page.locator('#w' + id)
@@ -45,7 +56,7 @@ async function editPttService(page, student, pttId) {
                 '.selectize-dropdown-content [data-selectable]:has-text("ABDUSHARIFOV ZAFARBEK ILXOMOVICH")'
             );
 
-            await option.waitFor({ state: 'visible' });
+            await option.waitFor({state: 'visible'});
 
             await option.click();
         }
@@ -94,7 +105,7 @@ async function editPttService(page, student, pttId) {
 
         if (!confirmed) {
             console.log("Foydalanuvchi bekor qildi");
-            return { success: false, pttId: pttId, message: "Foydalanuvchi bekor qildi" };
+            return {success: false, pttId: pttId, subjects: null, message: "Foydalanuvchi bekor qildi"};
         }
 
         await Promise.all([
@@ -107,7 +118,7 @@ async function editPttService(page, student, pttId) {
         throw error;
     }
 
-    return { success: true, pttId: pttId, message: "OK"};
+    return {success: true, pttId: pttId, subjects: subjects, message: "OK"};
 }
 
 module.exports = editPttService;

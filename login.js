@@ -15,11 +15,11 @@ const loginService = require('./services/loginService.js');
         'sessions/auth_check.json'
     );
 
-    // await loginService(
-    //     process.env.TEACHER_LOGIN,
-    //     process.env.TEACHER_PASSWORD,
-    //     'sessions/auth_teacher.json'
-    // );
+    await loginService(
+        process.env.TEACHER_LOGIN,
+        process.env.TEACHER_PASSWORD,
+        'sessions/auth_teacher.json'
+    );
 
     console.log("Barcha userlar uchun yangi sessiya yaratildi");
 

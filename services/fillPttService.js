@@ -6,7 +6,7 @@ async function fillPttService(page, studentId) {
 
         await page.goto(
             'https://hemis.isft.uz/performance/ptt-fill',
-            { waitUntil: 'domcontentloaded' }
+            {waitUntil: 'domcontentloaded'}
         );
 
         const currentUrl = page.url();

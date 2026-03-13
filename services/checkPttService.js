@@ -5,7 +5,7 @@ async function checkPttService(page, studentId, pttId) {
 
         await page.goto(
             `https://hemis.isft.uz/performance/ptt-check?code=${pttId}&view=1`,
-            { waitUntil: 'domcontentloaded' }
+            {waitUntil: 'domcontentloaded'}
         );
 
         const currentUrl = page.url();
@@ -27,8 +27,7 @@ async function checkPttService(page, studentId, pttId) {
             page.locator('.box-footer a.btn.btn-info.btn-flat').click()
         ]);
 
-        // await page.waitForTimeout(10000);
-
+        // await page.waitForTimeout(3000);
     } catch (error) {
 
         console.error(`Qaydnomani tasdiqlashda xatolik (${studentId}):`, error);
@@ -37,7 +36,7 @@ async function checkPttService(page, studentId, pttId) {
 
     }
 
-    return { success: true, pttId: pttId, message: "OK"};
+    return {success: true, pttId: pttId, message: "OK"};
 }
 
 module.exports = checkPttService;

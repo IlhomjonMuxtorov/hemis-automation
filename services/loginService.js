@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { chromium } = require('playwright');
+const {chromium} = require('playwright');
 const fs = require('fs');
 
 async function loginService(login, password, sessionFile) {
@@ -25,9 +25,9 @@ async function loginService(login, password, sessionFile) {
 
     console.log("Captcha kiriting...");
 
-    await page.waitForURL('https://hemis.isft.uz', { timeout: 0 });
+    await page.waitForURL('https://hemis.isft.uz', {timeout: 0});
 
-    await context.storageState({ path: sessionFile });
+    await context.storageState({path: sessionFile});
 
     console.log(`${sessionFile} sessiya saqlandi`);
 
