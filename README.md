@@ -31,3 +31,6 @@ Captcha kiritilgach har bir user uchun aloxidadan sessiya fayllari yaratiladi, u
 ```bash
 node main.js
 ```
+7. Fayllar va loglar:
+- `data/students.json` - talabalar ro'yxati
+- `logs/created_ptt.jsonl` - qaydnoma yaratilgan talabalar

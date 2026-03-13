@@ -1,4 +1,4 @@
-const { chromium } = require('playwright');
+const {chromium} = require('playwright');
 const fs = require('fs');
 const students = require('./data/students.json');
 
@@ -33,33 +33,81 @@ const fillPttService = require('./services/fillPttService');
     // const teacherPage = await teacherContext.newPage();
 
     try {
+        const processedStudents = new Map();
+
+        if (fs.existsSync('logs/created_ptt.jsonl')) {
+            const lines = fs.readFileSync('logs/created_ptt.jsonl', 'utf8').split('\n');
+
+            for (const line of lines) {
+                if (!line.trim()) continue;
+
+                const data = JSON.parse(line);
+
+                processedStudents.set(data.studentId, {
+                    pttId: data.pttId,
+                    pttNumber: data.pttNumber
+                });
+            }
+        }
 
         for (const student of students) {
 
             console.log("-------------");
             console.log(`Talaba: ${student.id}`);
+            let pttId = null;
+            let pttNumber = null;
 
             // 1 bosqich
-            const createResult = await createPttService(adminPage, student);
+            if (!processedStudents.has(student.id)) {
+                const createResult = await createPttService(adminPage, student);
 
-            if (!createResult.success) {
-                console.log(`PTT yaratilmadi: ${student.id}`);
+                if (!createResult.success) {
+                    console.log(`PTT yaratilmadi: ${student.id}`);
 
-                const log = {
+                    const log = {
+                        studentId: student.id,
+                        reason: createResult.message,
+                        time: new Date().toISOString()
+                    };
+
+                    fs.appendFileSync(
+                        'logs/failed_students_first_step.jsonl',
+                        JSON.stringify(log) + "\n"
+                    );
+
+                    continue;
+                }
+
+                pttId = createResult.pttId;
+                pttNumber = createResult.pttNumber;
+
+                const successLog = {
                     studentId: student.id,
-                    reason: createResult.message,
+                    pttId: pttId,
+                    pttNumber: pttNumber,
                     time: new Date().toISOString()
                 };
 
                 fs.appendFileSync(
-                    'logs/failed_students_first_step.jsonl',
-                    JSON.stringify(log) + "\n"
+                    'logs/created_ptt.jsonl',
+                    JSON.stringify(successLog) + "\n"
                 );
 
-                continue;
+                processedStudents.set(student.id, {
+                    pttId,
+                    pttNumber
+                });
+
+            } else {
+                const existing = processedStudents.get(student.id);
+
+                pttId = existing.pttId;
+                pttNumber = existing.pttNumber;
+
+                console.log(`1-bosqich tashlab o'tildi, sababi bu talaba uchun qaydnoma allaqachon yaratilgan edi. Talaba IDsi: ${student.id} Qaydnoma IDsi: ${pttId} Qaydnoma raqami: ${pttNumber}`);
             }
 
-            const editResult = await editPttService(adminPage, student, createResult.pttId);
+            const editResult = await editPttService(adminPage, student, pttId);
             // const editResult = await editPttService(adminPage, student, 884);
 
             if (!editResult.success) {

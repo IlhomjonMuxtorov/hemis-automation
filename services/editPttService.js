@@ -2,7 +2,6 @@ async function editPttService(page, student, pttId) {
     console.log(`Sahifaga o'tilmoqda: https://hemis.isft.uz/performance/ptt-edit?ptt=${pttId}`);
 
     try {
-
         await page.goto(
             `https://hemis.isft.uz/performance/ptt-edit?ptt=${pttId}`,
             { waitUntil: 'domcontentloaded' }
@@ -26,6 +25,16 @@ async function editPttService(page, student, pttId) {
 
             const id = 2 * i + 1;
 
+            // Agar qo'lda tanlangan bo'lsa, uni tashlab o'tib ketish.
+            const selected = await page.locator('#w' + id)
+                .locator('..') // parent td
+                .locator('.selectize-input .item')
+                .count();
+
+            if (selected > 0) {
+                continue;
+            }
+
             const input = page.locator('#w' + id + '-selectized');
 
             await input.click();
@@ -48,25 +57,25 @@ async function editPttService(page, student, pttId) {
                 wrapper.id = "playwright-confirm";
 
                 wrapper.innerHTML = `
-        <div style="
-            position:fixed;
-            top:0;
-            left:0;
-            width:100%;
-            height:100%;
-            background:rgba(0,0,0,0.4);
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            z-index:999999;
-        ">
-            <div style="background:white;padding:20px;border-radius:8px;text-align:center">
-                <p>Formani yuborishni tasdiqlaysizmi?</p>
-                <button id="confirmYes">Ha</button>
-                <button id="confirmNo">Yo‘q</button>
-            </div>
-        </div>
-        `;
+                <div style="
+                    position:fixed;
+                    top:0;
+                    left:0;
+                    width:100%;
+                    height:100%;
+                    background:rgba(0,0,0,0.4);
+                    display:flex;
+                    align-items:center;
+                    justify-content:center;
+                    z-index:999999;
+                ">
+                    <div style="background:white;padding:20px;border-radius:8px;text-align:center">
+                        <p>Formani yuborishni tasdiqlaysizmi?</p>
+                        <button id="confirmYes">Ha</button>
+                        <button id="confirmNo">Yo‘q</button>
+                    </div>
+                </div>
+                `;
 
                 document.body.appendChild(wrapper);
 
@@ -83,19 +92,15 @@ async function editPttService(page, student, pttId) {
             });
         });
 
-
         if (!confirmed) {
             console.log("Foydalanuvchi bekor qildi");
-            return { success: false, pttId: null };
+            return { success: false, pttId: pttId, message: "Foydalanuvchi bekor qildi" };
         }
 
         await Promise.all([
-            page.waitForURL('**ptt-edit?ptt=*'),
+            page.waitForNavigation(),
             page.locator('button[type="submit"]').click()
         ]);
-
-        await page.waitForTimeout(50000);
-
     } catch (error) {
         console.error(`PTT yaratishda xatolik (${student.id}):`, error);
 

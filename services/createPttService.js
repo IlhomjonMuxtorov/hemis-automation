@@ -1,5 +1,6 @@
 async function createPttService(page, student) {
     let pttId = null;
+    let pttNumber = null;
     console.log(`Sahifaga o'tilmoqda: https://hemis.isft.uz/performance/ptt-edit?student=${student.id}`);
 
     try {
@@ -21,7 +22,11 @@ async function createPttService(page, student) {
         console.log("Ma'lumotlar to'ldirilmoqda...");
 
         // 1. Qaydnoma raqami
-        await page.fill('#estudentptt-number', student.id);
+        const random = Math.floor(100 + Math.random() * 900); // 100-999
+        pttNumber = `${student.id}-${random}`;
+
+        await page.fill('#estudentptt-number', pttNumber);
+
         console.log("Qaydnoma raqami yozildi");
 
         // 2. Sana
@@ -113,6 +118,7 @@ async function createPttService(page, student) {
                 return {
                     success: false,
                     pttId: null,
+                    pttNumber: null,
                     message: "PTT ID aniqlanmadi"
                 };
             }
@@ -120,7 +126,7 @@ async function createPttService(page, student) {
             console.log("PTT ID:", pttId);
         } else {
             console.log(`disabledItemsCount: ${disabledItemsCount}`);
-            return { success: false, pttId: null, message: "Bu talaba uchun qaydnoma yaratib bo'lmaydi"};
+            return { success: false, pttId: null, pttNumber: null, message: "Bu talaba uchun qaydnoma yaratib bo'lmaydi"};
         }
 
     } catch (error) {
@@ -129,7 +135,7 @@ async function createPttService(page, student) {
         throw error;
     }
 
-    return { success: true, pttId: pttId, message: "OK"};
+    return { success: true, pttId: pttId, pttNumber: pttNumber, message: "OK"};
 }
 
 module.exports = createPttService;
