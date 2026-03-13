@@ -6,7 +6,7 @@ const createPttService = require('./services/createPttService');
 const editPttService = require('./services/editPttService');
 const approvePttService = require('./services/approvePttService');
 const checkPttService = require('./services/checkPttService');
-const fillPttService = require('./services/fillPttService');
+const fillGradesService = require('./services/fillGradesService');
 
 (async () => {
 
@@ -65,7 +65,8 @@ const fillPttService = require('./services/fillPttService');
                 editedPTTsList.set(data.pttId, {
                     studentId: data.studentId,
                     pttId: data.pttId,
-                    pttNumber: data.pttNumber
+                    pttNumber: data.pttNumber,
+                    editedSubjects: data.editedSubjects,
                 });
             }
         }
@@ -102,6 +103,25 @@ const fillPttService = require('./services/fillPttService');
                     studentId: data.studentId,
                     pttId: data.pttId,
                     pttNumber: data.pttNumber
+                });
+            }
+        }
+
+        const studentGradesList = new Map();
+
+        if (fs.existsSync('logs/student_grades.jsonl')) {
+            const lines = fs.readFileSync('logs/student_grades.jsonl', 'utf8').split('\n');
+
+            for (const line of lines) {
+                if (!line.trim()) continue;
+
+                const data = JSON.parse(line);
+
+                studentGradesList.set(data.editedSubjectId, {
+                    studentId: data.studentId,
+                    pttId: data.pttId,
+                    pttNumber: data.pttNumber,
+                    editedSubjectId: data.editedSubjectId,
                 });
             }
         }
@@ -330,6 +350,69 @@ const fillPttService = require('./services/fillPttService');
             console.log(pttNumber);
             console.log(subjects);
             console.log(editedSubjects);
+            console.log(typeof editedSubjects);
+
+            // 5-bosqich - Baxolarni qo'yish
+            for (const editedSubject of editedSubjects) {
+                console.log(editedSubject.id);
+                console.log(editedSubject.name);
+                console.log(editedSubject.semesterName);
+
+                if (!studentGradesList.has(editedSubject.id)) {
+                    const fillGradesResult = await fillGradesService(teacherPage, editedSubject.id);
+
+                    if (!fillGradesResult.success) {
+                        console.log(`Qaydnomani tasdiqlashda xatolik sodir bo'ldi: ${editedSubject.id}`);
+
+                        const log = {
+                            studentId: student.id,
+                            pttId: pttId,
+                            pttNumber: pttNumber,
+                            editedSubjectId: editedSubject.id,
+                            reason: fillGradesResult.message,
+                            time: new Date().toISOString()
+                        };
+
+                        fs.appendFileSync(
+                            'logs/failed_students_fifth_step.jsonl',
+                            JSON.stringify(log) + "\n"
+                        );
+
+                        continue;
+                    }
+
+                    const successLog = {
+                        studentId: student.id,
+                        pttId: pttId,
+                        pttNumber: pttNumber,
+                        editedSubjectId: editedSubject.id,
+                        time: new Date().toISOString()
+                    };
+
+                    fs.appendFileSync(
+                        'logs/student_grades.jsonl',
+                        JSON.stringify(successLog) + "\n"
+                    );
+
+                    studentGradesList.set(pttId, {
+                        studentId: student.id,
+                        pttId: pttId,
+                        pttNumber: pttNumber,
+                        editedSubjectId: editedSubject.id,
+                    });
+
+                    console.log(`Qaydnomani tasdiqlash: ${fillGradesResult.message}`);
+                } else {
+                    // const existing = studentGradesList.get(pttId);
+                    //
+                    // pttId = existing.pttId;
+                    // pttNumber = existing.pttNumber;
+
+                    console.log(`5-bosqich tashlab o'tildi. Talaba IDsi: ${student.id} Qaydnoma IDsi: ${pttId} Qaydnoma raqami: ${pttNumber}`);
+                }
+
+
+            }
 
             // await page.waitForTimeout(3000);
 
