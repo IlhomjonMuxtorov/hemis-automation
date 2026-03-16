@@ -117,11 +117,12 @@ const fillGradesService = require('./services/fillGradesService');
 
                 const data = JSON.parse(line);
 
-                studentGradesList.set(data.editedSubjectId, {
+                studentGradesList.set(data.id, {
+                    id: data.id,
                     studentId: data.studentId,
                     pttId: data.pttId,
                     pttNumber: data.pttNumber,
-                    editedSubjectId: data.editedSubjectId,
+                    subject: data.subject,
                 });
             }
         }
@@ -346,29 +347,20 @@ const fillGradesService = require('./services/fillGradesService');
                 console.log(`4-bosqich tashlab o'tildi. Talaba IDsi: ${student.id} Qaydnoma IDsi: ${pttId} Qaydnoma raqami: ${pttNumber}`);
             }
 
-            console.log(pttId);
-            console.log(pttNumber);
-            console.log(subjects);
-            console.log(editedSubjects);
-            console.log(typeof editedSubjects);
-
             // 5-bosqich - Baxolarni qo'yish
-            for (const editedSubject of editedSubjects) {
-                console.log(editedSubject.id);
-                console.log(editedSubject.name);
-                console.log(editedSubject.semesterName);
-
-                if (!studentGradesList.has(editedSubject.id)) {
-                    const fillGradesResult = await fillGradesService(teacherPage, editedSubject.id);
+            for (const selectedSubject of subjects) {
+                if (!studentGradesList.has(selectedSubject.pttFillId)) {
+                    const fillGradesResult = await fillGradesService(teacherPage, selectedSubject);
 
                     if (!fillGradesResult.success) {
-                        console.log(`Qaydnomani tasdiqlashda xatolik sodir bo'ldi: ${editedSubject.id}`);
+                        console.log(`Qaydnomaga baxoni ko'chirishda xatolik sodir bo'ldi: ${selectedSubject.pttFillId}`);
 
                         const log = {
+                            id: selectedSubject.pttFillId,
                             studentId: student.id,
                             pttId: pttId,
                             pttNumber: pttNumber,
-                            editedSubjectId: editedSubject.id,
+                            subject: selectedSubject,
                             reason: fillGradesResult.message,
                             time: new Date().toISOString()
                         };
@@ -382,10 +374,11 @@ const fillGradesService = require('./services/fillGradesService');
                     }
 
                     const successLog = {
+                        id: selectedSubject.pttFillId,
                         studentId: student.id,
                         pttId: pttId,
                         pttNumber: pttNumber,
-                        editedSubjectId: editedSubject.id,
+                        subject: selectedSubject,
                         time: new Date().toISOString()
                     };
 
@@ -395,30 +388,26 @@ const fillGradesService = require('./services/fillGradesService');
                     );
 
                     studentGradesList.set(pttId, {
+                        id: selectedSubject.pttFillId,
                         studentId: student.id,
                         pttId: pttId,
                         pttNumber: pttNumber,
-                        editedSubjectId: editedSubject.id,
+                        subject: selectedSubject,
                     });
 
-                    console.log(`Qaydnomani tasdiqlash: ${fillGradesResult.message}`);
+                    console.log(`Baxo ko'chirib qo'yildi: ${fillGradesResult.message}`);
                 } else {
-                    // const existing = studentGradesList.get(pttId);
-                    //
-                    // pttId = existing.pttId;
-                    // pttNumber = existing.pttNumber;
-
-                    console.log(`5-bosqich tashlab o'tildi. Talaba IDsi: ${student.id} Qaydnoma IDsi: ${pttId} Qaydnoma raqami: ${pttNumber}`);
+                    console.log(
+                        `5-bosqich tashlab o'tildi. 
+                        Talaba IDsi: ${student.id} 
+                        Qaydnoma IDsi: ${pttId} 
+                        Qaydnoma raqami: ${pttNumber}
+                        Fan nomi: ${selectedSubject.name}
+                        Semestr nomi: ${selectedSubject.semesterName}
+                        Baxo sahifasi IDsi: ${selectedSubject.pttFillId}
+                    `);
                 }
-
-
             }
-
-            // await page.waitForTimeout(3000);
-
-            // // 3 bosqich
-            // await fillPttService(teacherPage, student.id);
-
         }
 
         console.log("Jarayon tugadi");

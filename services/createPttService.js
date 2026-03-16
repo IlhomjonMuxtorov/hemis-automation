@@ -79,8 +79,6 @@ async function createPttService(page, student) {
         await page.waitForSelector('.ptt-items');
 
         // Fanlarni tanlash
-        const subjectIds = student.subjects.map(s => String(s.subject_id));
-
         const rows = page.locator('tr[data-key]');
         const rowsCount = await rows.count();
 
@@ -91,8 +89,9 @@ async function createPttService(page, student) {
             const row = rows.nth(i);
 
             const subjectId = await row.getAttribute('data-key');
+            const subject = student.subjects.find(s => String(s.subject_id) === subjectId);
 
-            if (!subjectIds.includes(subjectId)) {
+            if (subject === undefined) {
                 continue;
             }
 
@@ -103,11 +102,15 @@ async function createPttService(page, student) {
             if (!isDisabled) {
                 const subjectName = await row.locator('td').nth(2).textContent();
                 const semesterName = await row.locator('td').nth(3).textContent();
+                const credit = await row.locator('td').nth(6).textContent();
 
                 subjects.push({
                     id: subjectId,
+                    pttFillId: null,
                     name: subjectName,
                     semesterName: semesterName,
+                    credit: credit,
+                    grade: subject.grade,
                 });
 
                 await checkbox.check();
@@ -140,6 +143,27 @@ async function createPttService(page, student) {
                     subjects: null,
                     message: "PTT ID aniqlanmadi"
                 };
+            }
+
+            const rows = page.locator('#ptt-form table tbody tr[data-key]');
+            const rowsCount = await rows.count();
+
+            for (let i = 0; i < rowsCount; i++) {
+
+                const id = 2 * i + 1;
+
+                const subjectId = await rows.nth(i).getAttribute('data-key');
+                const subjectName = await rows.nth(i).locator('td').nth(1).textContent();
+                const semesterName = await rows.nth(i).locator('td').nth(2).textContent();
+
+                // subjects array ichidan shu fan va semester bo'yicha topish
+                const subject = subjects.find(
+                    s => s.name === subjectName && s.semesterName === semesterName
+                );
+
+                if (subject) {
+                    subject.pttFillId = subjectId;
+                }
             }
 
             console.log("PTT ID:", pttId);
