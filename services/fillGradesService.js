@@ -1,8 +1,5 @@
 async function fillGradesService(page, subject) {
-
     console.log(`Baxolarni qo'yish sahifasi ochilmoqda... (${subject.pttFillId})`);
-
-    console.log(subject);
 
     try {
 
@@ -44,6 +41,8 @@ async function fillGradesService(page, subject) {
             page.waitForLoadState('networkidle'),
             page.locator('#subjects-grid button[type="submit"]').click()
         ]);
+
+        // await page.waitForTimeout(15000);
     } catch (error) {
 
         console.error(`Baxolarni qo'yishda xatolik (${subject.pttFillId}):`, error);

@@ -1,0 +1,30 @@
+[
+  {
+    "id": "138183",
+    "semester_name": "8-semestr",
+    "pin": "41303890221700",
+    "subjects" : [
+      {
+        "subject_id": 485927,
+        "subject_name": "Faoliyatni boshqarish II",
+        "semester_name": "8-semestr",
+        "credit": 6,
+        "grade": 48
+      },
+      {
+        "subject_id": 485928,
+        "subject_name": "Audit II",
+        "semester_name": "8-semestr",
+        "credit": 6,
+        "grade": 67
+      },
+      {
+        "subject_id": 439566,
+        "subject_name": "Korporativ va Biznes huquqi II",
+        "semester_name": "7-semestr",
+        "credit": 4,
+        "grade": 67
+      }
+    ]
+  }
+]

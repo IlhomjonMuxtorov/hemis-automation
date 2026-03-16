@@ -1,7 +1,6 @@
 const {chromium} = require('playwright');
 const fs = require('fs');
-const students = require('./data/students.json');
-
+const getStudentsService = require('./services/getStudentsService');
 const createPttService = require('./services/createPttService');
 const editPttService = require('./services/editPttService');
 const approvePttService = require('./services/approvePttService');
@@ -9,6 +8,19 @@ const checkPttService = require('./services/checkPttService');
 const fillGradesService = require('./services/fillGradesService');
 
 (async () => {
+    // let isShuttingDown = false;
+    // let isProcessingStep = false;
+    //
+    // process.on('SIGINT', () => {
+    //     console.log("Ctrl+C bosildi. Joriy jarayon tugashini kutyapmiz...");
+    //     isShuttingDown = true;
+    // });
+    //
+    // process.on('SIGTERM', () => {
+    //     console.log("Server shutdown signali keldi. Joriy jarayon tugashini kutyapmiz...");
+    //     isShuttingDown = true;
+    // });
+
 
     const browser = await chromium.launch({
         headless: false,
@@ -34,6 +46,38 @@ const fillGradesService = require('./services/fillGradesService');
     const teacherPage = await teacherContext.newPage();
 
     try {
+        let students = [];
+
+        if (fs.existsSync('./data/students.json')) {
+
+            console.log("students.json faylidan yuklanmoqda...");
+
+            students = JSON.parse(
+                fs.readFileSync('./data/students.json', 'utf8')
+            );
+
+        } else {
+
+            console.log("API dan studentlar olinmoqda...");
+
+            const studentsResult = await getStudentsService(14);
+
+            if (!studentsResult.success) {
+                console.log("Studentlarni olishda xatolik");
+                process.exit();
+            }
+
+            students = studentsResult.students;
+
+            // faylga yozish
+            fs.writeFileSync(
+                './data/students.json',
+                JSON.stringify(students, null, 2)
+            );
+
+            console.log("students.json fayliga saqlandi");
+        }
+
         const processedStudents = new Map();
 
         if (fs.existsSync('logs/created_ptt.jsonl')) {
@@ -138,6 +182,7 @@ const fillGradesService = require('./services/fillGradesService');
 
             // 1-bosqich - Qaydnoma yaratish
             if (!processedStudents.has(student.id)) {
+                // isProcessingStep = true;
                 const createResult = await createPttService(adminPage, student);
 
                 if (!createResult.success) {
@@ -387,7 +432,7 @@ const fillGradesService = require('./services/fillGradesService');
                         JSON.stringify(successLog) + "\n"
                     );
 
-                    studentGradesList.set(pttId, {
+                    studentGradesList.set(selectedSubject.pttFillId, {
                         id: selectedSubject.pttFillId,
                         studentId: student.id,
                         pttId: pttId,
@@ -398,9 +443,9 @@ const fillGradesService = require('./services/fillGradesService');
                     console.log(`Baxo ko'chirib qo'yildi: ${fillGradesResult.message}`);
                 } else {
                     console.log(
-                        `5-bosqich tashlab o'tildi. 
-                        Talaba IDsi: ${student.id} 
-                        Qaydnoma IDsi: ${pttId} 
+                        `5-bosqich tashlab o'tildi.
+                        Talaba IDsi: ${student.id}
+                        Qaydnoma IDsi: ${pttId}
                         Qaydnoma raqami: ${pttNumber}
                         Fan nomi: ${selectedSubject.name}
                         Semestr nomi: ${selectedSubject.semesterName}

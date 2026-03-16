@@ -2,7 +2,6 @@ async function checkPttService(page, studentId, pttId) {
     console.log(`Sahifaga o'tilmoqda: https://hemis.isft.uz/performance/ptt-check?code=${pttId}&view=1`);
 
     try {
-
         await page.goto(
             `https://hemis.isft.uz/performance/ptt-check?code=${pttId}&view=1`,
             {waitUntil: 'domcontentloaded'}
