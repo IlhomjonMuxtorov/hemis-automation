@@ -37,10 +37,10 @@ async function fillGradesService(page, subject) {
             }
         }
 
-        await Promise.all([
-            page.waitForLoadState('networkidle'),
-            page.locator('#subjects-grid button[type="submit"]').click()
-        ]);
+        // await Promise.all([
+        //     page.waitForLoadState('networkidle'),
+        //     page.locator('#subjects-grid button[type="submit"]').click()
+        // ]);
 
         // await page.waitForTimeout(15000);
     } catch (error) {

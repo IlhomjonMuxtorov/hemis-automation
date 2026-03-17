@@ -119,64 +119,64 @@ async function createPttService(page, student) {
             }
         }
 
-        // if (rowsCount > disabledItemsCount) {
-        //     console.log(`PTT tayyor: ${student.id}`);
-        //
-        //     page.once('dialog', async dialog => {
-        //         await dialog.accept();
-        //     });
-        //
-        //     await Promise.all([
-        //         page.waitForURL('**ptt-edit?ptt=*'),
-        //         page.locator('button[type="submit"]').click()
-        //     ]);
-        //
-        //     const url = page.url();
-        //
-        //     pttId = new URL(url).searchParams.get('ptt');
-        //
-        //     if (!pttId) {
-        //         return {
-        //             success: false,
-        //             pttId: null,
-        //             pttNumber: null,
-        //             subjects: null,
-        //             message: "PTT ID aniqlanmadi"
-        //         };
-        //     }
-        //
-        //     const rows = page.locator('#ptt-form table tbody tr[data-key]');
-        //     const rowsCount = await rows.count();
-        //
-        //     for (let i = 0; i < rowsCount; i++) {
-        //
-        //         const id = 2 * i + 1;
-        //
-        //         const subjectId = await rows.nth(i).getAttribute('data-key');
-        //         const subjectName = await rows.nth(i).locator('td').nth(1).textContent();
-        //         const semesterName = await rows.nth(i).locator('td').nth(2).textContent();
-        //
-        //         // subjects array ichidan shu fan va semester bo'yicha topish
-        //         const subject = subjects.find(
-        //             s => s.name === subjectName && s.semesterName === semesterName
-        //         );
-        //
-        //         if (subject) {
-        //             subject.pttFillId = subjectId;
-        //         }
-        //     }
-        //
-        //     console.log("PTT ID:", pttId);
-        // } else {
-        //     console.log(`disabledItemsCount: ${disabledItemsCount}`);
-        //     return {
-        //         success: false,
-        //         pttId: null,
-        //         pttNumber: null,
-        //         subjects: null,
-        //         message: "Bu talaba uchun qaydnoma yaratib bo'lmaydi"
-        //     };
-        // }
+        if (rowsCount > disabledItemsCount) {
+            console.log(`PTT tayyor: ${student.id}`);
+
+            page.once('dialog', async dialog => {
+                await dialog.accept();
+            });
+
+            await Promise.all([
+                page.waitForURL('**ptt-edit?ptt=*'),
+                page.locator('button[type="submit"]').click()
+            ]);
+
+            const url = page.url();
+
+            pttId = new URL(url).searchParams.get('ptt');
+
+            if (!pttId) {
+                return {
+                    success: false,
+                    pttId: null,
+                    pttNumber: null,
+                    subjects: null,
+                    message: "PTT ID aniqlanmadi"
+                };
+            }
+
+            const rows = page.locator('#ptt-form table tbody tr[data-key]');
+            const rowsCount = await rows.count();
+
+            for (let i = 0; i < rowsCount; i++) {
+
+                const id = 2 * i + 1;
+
+                const subjectId = await rows.nth(i).getAttribute('data-key');
+                const subjectName = await rows.nth(i).locator('td').nth(1).textContent();
+                const semesterName = await rows.nth(i).locator('td').nth(2).textContent();
+
+                // subjects array ichidan shu fan va semester bo'yicha topish
+                const subject = subjects.find(
+                    s => s.name === subjectName && s.semesterName === semesterName
+                );
+
+                if (subject) {
+                    subject.pttFillId = subjectId;
+                }
+            }
+
+            console.log("PTT ID:", pttId);
+        } else {
+            console.log(`disabledItemsCount: ${disabledItemsCount}`);
+            return {
+                success: false,
+                pttId: null,
+                pttNumber: null,
+                subjects: null,
+                message: "Bu talaba uchun qaydnoma yaratib bo'lmaydi"
+            };
+        }
     } catch (error) {
         console.error(`PTT yaratishda xatolik (${student.id}):`, error);
 
