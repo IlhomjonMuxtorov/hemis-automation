@@ -16,21 +16,47 @@ node login.js
 ```
 Agar hammasi to'g'ri bo'lsa, brauzer oynasi ochiladi va captchani kiritish talab etiladi.
 Captcha kiritilgach har bir user uchun aloxidadan sessiya fayllari yaratiladi, ular ``sessions/*.json`` papkasidagi `.json` fayllarda saqlanadi.
-5. Keyin esa, `data/students.json` faylini to'ldirish kerak. Hozircha mana bunaqa ko'rinishda foydalanilyapti:
+5. Baxo qo'yish jarayonini ishlatish uchun:
+```bash
+node main.js --edu_plan_id=14 --semester_id=2
+```
+- edu_plan_id - bu ta'lim reja IDsi
+- semester_id - dasturdagi semestr IDsi
+
+6. Fayllar va loglar:
+- `data/students.json` - talabalar ro'yxati, dastur ishga tushirilganda bu ma'lumotlar tizimdan yuklab olinadi, to'liq ishga tushirishdan oldin
+ma'lumot yuklab olingach uni tekshirib chiqish tavisya etiladi!
+- `logs/created_ptt.jsonl` - qaydnoma yaratilgan talabalar
+7. `data/students.json` faylini ko'ring. To'g'ri ma'lumot quyidagicha bo'lishi kerak:
 ```json
 [
   {
-    "id": "117968"
-  },
-  {
-    "id": "117958"
+    "id": "138183",
+    "semester_name": "8-semestr",
+    "pin": "41303890221700",
+    "subjects" : [
+      {
+        "subject_id": 485927,
+        "subject_name": "Faoliyatni boshqarish II",
+        "semester_name": "8-semestr",
+        "credit": 6,
+        "grade": 48
+      },
+      {
+        "subject_id": 485928,
+        "subject_name": "Audit II",
+        "semester_name": "8-semestr",
+        "credit": 6,
+        "grade": 67
+      },
+      {
+        "subject_id": 439566,
+        "subject_name": "Korporativ va Biznes huquqi II",
+        "semester_name": "7-semestr",
+        "credit": 4,
+        "grade": 67
+      }
+    ]
   }
 ]
 ```
-6. Baxo qo'yish jarayonini ishlatish uchun:
-```bash
-node main.js
-```
-7. Fayllar va loglar:
-- `data/students.json` - talabalar ro'yxati
-- `logs/created_ptt.jsonl` - qaydnoma yaratilgan talabalar
