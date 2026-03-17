@@ -1,4 +1,4 @@
-const {chromium} = require('playwright');
+const { chromium } = require('playwright');
 const fs = require('fs');
 const getStudentsService = require('./services/getStudentsService');
 const createPttService = require('./services/createPttService');
@@ -8,6 +8,40 @@ const checkPttService = require('./services/checkPttService');
 const fillGradesService = require('./services/fillGradesService');
 
 (async () => {
+    const args = process.argv.slice(2);
+    let edu_plan_id = null;
+    let semester_id = null;
+
+    args.forEach(arg => {
+        if (arg.startsWith('--edu_plan_id=')) {
+            edu_plan_id = parseInt(arg.split('=')[1], 10);
+        } else if (arg.startsWith('--semester_id=')) {
+            semester_id = parseInt(arg.split('=')[1], 10);
+        }
+    });
+
+    if (!edu_plan_id || !semester_id) {
+        console.error("Iltimos, edu_plan_id va semester_id parametrlarni nomi bilan kiriting.\nMisol uchun: node main.js --edu_plan_id=14 --semester_id=11");
+        process.exit(1);
+    }
+
+    const readline = require('readline').createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+
+    const proceed = await new Promise(resolve => {
+        readline.question(`Siz edu_plan_id=${edu_plan_id} va semester_id=${semester_id} larni kiritdingiz. Rostdan ham ma'lumotlarni yuklab olmoqchimisiz? (yes/no): `, answer => {
+            resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes');
+            readline.close();
+        });
+    });
+
+    if (!proceed) {
+        console.log("Jarayon to'xtatildi.");
+        process.exit(0);
+    }
+
     // let isShuttingDown = false;
     // let isProcessingStep = false;
     //
@@ -60,7 +94,7 @@ const fillGradesService = require('./services/fillGradesService');
 
             console.log("API dan studentlar olinmoqda...");
 
-            const studentsResult = await getStudentsService(14);
+            const studentsResult = await getStudentsService(edu_plan_id, semester_id);
 
             if (!studentsResult.success) {
                 console.log("Studentlarni olishda xatolik");
@@ -76,6 +110,48 @@ const fillGradesService = require('./services/fillGradesService');
             );
 
             console.log("students.json fayliga saqlandi");
+        }
+
+        const missingSubjects = [];
+        for (const student of students) {
+            if (student.subjects) {
+                for (const subject of student.subjects) {
+                    if (!subject.subject_id) {
+                        missingSubjects.push({
+                            studentId: student.id,
+                            studentName: student.name, // Assuming student has a name field
+                            subject: subject
+                        });
+                    }
+                }
+            }
+        }
+
+        if (missingSubjects.length > 0) {
+            if (!fs.existsSync('./logs')) {
+                fs.mkdirSync('./logs');
+            }
+            const logFilePath = './logs/missing_subject_ids.json';
+            fs.writeFileSync(logFilePath, JSON.stringify(missingSubjects, null, 2));
+            console.log(`\nDIQQAT: Ayrim talabalarning fanlarida subject_id qatori bo'sh (null).`);
+            console.log(`Ushbu kamchiliklar ${logFilePath} fayliga yozildi. Ularni shu yerdan ko'rishingiz mumkin.\n`);
+        }
+
+        const checkDataProceed = await new Promise(resolve => {
+            const readline = require('readline').createInterface({
+                input: process.stdin,
+                output: process.stdout
+            });
+            readline.question(`Talaba ma'lumotlari tayyor${missingSubjects.length > 0 ? " lekin ba'zi kamchiliklar aniqlandi" : ""}. Ularni ko'rib chiqishni tavsiya qilaman.\nIltimos, ./data/students.json faylini tekshirib chiqing.\nDavom etmoqchimisiz? (yes/no): `, answer => {
+                resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes');
+                readline.close();
+            });
+        });
+
+        if (!checkDataProceed) {
+            console.log("Jarayon to'xtatildi.");
+            await browser.close();
+            process.exit(0);
         }
 
         const processedStudents = new Map();
@@ -179,6 +255,22 @@ const fillGradesService = require('./services/fillGradesService');
             let pttNumber = null;
             let subjects = [];
             let editedSubjects = [];
+
+            // subject_id si yo'q bo'lgan fani bor yo'qligini tekshiramiz
+            let hasMissingSubjectId = false;
+            if (student.subjects) {
+                for (const subject of student.subjects) {
+                    if (!subject.subject_id) {
+                        hasMissingSubjectId = true;
+                        break;
+                    }
+                }
+            }
+
+            if (hasMissingSubjectId) {
+                console.log(`DIQQAT: Talaba ${student.id} dagi fanda subject_id yo'q. Ushbu talaba o'tkazib yuborilmoqda...`);
+                continue;
+            }
 
             // 1-bosqich - Qaydnoma yaratish
             if (!processedStudents.has(student.id)) {

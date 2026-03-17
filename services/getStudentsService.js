@@ -1,7 +1,7 @@
 require('dotenv').config();
 const axios = require('axios');
 
-async function getStudentsService(edu_plan_id) {
+async function getStudentsService(edu_plan_id, semester_id) {
 
     console.log("Avtorizatsiya qilinmoqda...");
 
@@ -39,6 +39,7 @@ async function getStudentsService(edu_plan_id) {
                 {
                     params: {
                         edu_plan_id: edu_plan_id,
+                        semester_id: semester_id,
                         "per-page": 100,
                         page: page
                     },
