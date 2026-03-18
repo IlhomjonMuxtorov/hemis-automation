@@ -8,7 +8,7 @@ async function getToken() {
     console.log("gradeLogsService: Avtorizatsiya qilinmoqda...");
 
     const loginResponse = await axios.post(
-        'http://localhost:8040/uz/auth/login',
+        `${process.env.ISFT_BASE_URL}/uz/auth/login`,
         {
             username: process.env.ISFT_LOGIN,
             password: process.env.ISFT_PASSWORD,
@@ -44,7 +44,7 @@ async function gradeLogsService(logId, payload) {
         console.log(`gradeLogsService: Log ${logId} uchun baho yuborilmoqda...`);
 
         const response = await axios.post(
-            `http://localhost:8040/uz/copy-student-grades-to-hemis-logs/add-grade/${logId}`,
+            `${process.env.ISFT_BASE_URL}/uz/copy-student-grades-to-hemis-logs/add-grade/${logId}`,
             cleanPayload,
             {
                 headers: {

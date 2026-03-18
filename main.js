@@ -3,6 +3,7 @@ const fs = require('fs');
 const {PROCESS_STEPS, PROCESS_STATUS} = require('./constants');
 
 const getStudentsService = require('./services/getStudentsService');
+const getStudentsMockService = require('./services/getStudentsMockService');
 const createPttService = require('./services/createPttService');
 const editPttService = require('./services/editPttService');
 const approvePttService = require('./services/approvePttService');
@@ -48,42 +49,10 @@ const updateGradeLogsService = require('./services/updateGradeLogsService');
         process.exit(0);
     }
 
-    // let isShuttingDown = false;
-    // let isProcessingStep = false;
-    //
-    // process.on('SIGINT', () => {
-    //     console.log("Ctrl+C bosildi. Joriy jarayon tugashini kutyapmiz...");
-    //     isShuttingDown = true;
-    // });
-    //
-    // process.on('SIGTERM', () => {
-    //     console.log("Server shutdown signali keldi. Joriy jarayon tugashini kutyapmiz...");
-    //     isShuttingDown = true;
-    // });
-
-
     const browser = await chromium.launch({
         headless: false,
         channel: "chrome"
     });
-
-    // 3 ta user uchun context
-    const adminContext = await browser.newContext({
-        storageState: 'sessions/auth_admin.json'
-    });
-
-    const checkContext = await browser.newContext({
-        storageState: 'sessions/auth_check.json'
-    });
-
-    const teacherContext = await browser.newContext({
-        storageState: 'sessions/auth_teacher.json'
-    });
-
-    // 3 ta page
-    const adminPage = await adminContext.newPage();
-    const checkPage = await checkContext.newPage();
-    const teacherPage = await teacherContext.newPage();
 
     try {
         let students = [];
@@ -100,7 +69,8 @@ const updateGradeLogsService = require('./services/updateGradeLogsService');
 
             console.log("API dan studentlar olinmoqda...");
 
-            const studentsResult = await getStudentsService(edu_plan_id, semester_id);
+            // const studentsResult = await getStudentsService(edu_plan_id, semester_id);
+            const studentsResult = await getStudentsMockService(edu_plan_id, semester_id);
 
             if (!studentsResult.success) {
                 console.log("Studentlarni olishda xatolik");
@@ -148,7 +118,7 @@ const updateGradeLogsService = require('./services/updateGradeLogsService');
                 input: process.stdin,
                 output: process.stdout
             });
-            readline.question(`Talaba ma'lumotlari tayyor${missingSubjects.length > 0 ? " lekin ba'zi kamchiliklar aniqlandi" : ""}. Ularni ko'rib chiqishni tavsiya qilaman.\nIltimos, ./data/students.json faylini tekshirib chiqing.\nDavom etmoqchimisiz? (yes/no): `, answer => {
+            readline.question(`Talaba ma'lumotlari tayyor ${missingSubjects.length > 0 ? " lekin ba'zi kamchiliklar aniqlandi" : ""}. Ularni ko'rib chiqishni tavsiya qilaman.\nIltimos, ./data/students.json faylini tekshirib chiqing.\nDavom etmoqchimisiz? (yes/no): `, answer => {
                 resolve(answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes');
                 readline.close();
             });
@@ -159,6 +129,24 @@ const updateGradeLogsService = require('./services/updateGradeLogsService');
             await browser.close();
             process.exit(0);
         }
+
+        // 3 ta user uchun context
+        const adminContext = await browser.newContext({
+            storageState: 'sessions/auth_admin.json'
+        });
+
+        const checkContext = await browser.newContext({
+            storageState: 'sessions/auth_check.json'
+        });
+
+        const teacherContext = await browser.newContext({
+            storageState: 'sessions/auth_teacher.json'
+        });
+
+        // 3 ta page
+        const adminPage = await adminContext.newPage();
+        const checkPage = await checkContext.newPage();
+        const teacherPage = await teacherContext.newPage();
 
         const processedStudents = new Map();
 
@@ -256,538 +244,538 @@ const updateGradeLogsService = require('./services/updateGradeLogsService');
             }
         }
 
-        for (const student of students) {
-
-            console.log("-------------");
-            console.log(`Talaba: ${student.id}`);
-            let pttId = null;
-            let pttNumber = null;
-            let logId = null;
-            let subjects = [];
-            let editedSubjects = [];
-
-            if (!processedStudents.has(student.id)) {
-                try {
-                    logId = await writeLogsService({
-                        student_id: Number(student.student_id),
-                        step: PROCESS_STEPS.PREPARING_TO_START,
-                        status: PROCESS_STATUS.START,
-                        unique_string: `student_${student.id}_ptt_${pttId}`
-                    });
-                } catch (logError) {
-                    console.error(`writeLogsService xatolik (student ${student.id}):`, logError.message);
-                }
-            } else {
-                const existing = processedStudents.get(student.id);
-
-                logId = existing.logId
-            }
-
-            // subject_id si yo'q bo'lgan fani bor yo'qligini tekshiramiz
-            let hasMissingSubjectId = false;
-            if (student.subjects) {
-                for (const subject of student.subjects) {
-                    if (!subject.subject_id) {
-                        hasMissingSubjectId = true;
-                        break;
-                    }
-                }
-            }
-
-            if (hasMissingSubjectId) {
-                try {
-                    logId = await updateLogsService(logId, {
-                        student_id: Number(student.student_id),
-                        step: PROCESS_STEPS.PREPARING_TO_START,
-                        status: PROCESS_STATUS.ERROR,
-                        unique_string: `student_${student.id}_ptt_${pttId}`
-                    });
-                } catch (logError) {
-                    console.error(`updateLogsService(logId xatolik (student ${student.id}):`, logError.message);
-                }
-                console.log(`DIQQAT: Talaba ${student.id} dagi fanda subject_id yo'q. Ushbu talaba o'tkazib yuborilmoqda...`);
-                continue;
-            }
-
-            // 1-bosqich - Qaydnoma yaratish
-            if (!processedStudents.has(student.id)) {
-                try {
-                    logId = await updateLogsService(logId, {
-                        student_id: Number(student.student_id),
-                        step: PROCESS_STEPS.FIRST_STEP,
-                        status: PROCESS_STATUS.START,
-                        unique_string: `student_${student.id}_ptt_${pttId}`
-                    });
-                } catch (logError) {
-                    console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
-                }
-
-                const createResult = await createPttService(adminPage, student);
-
-                if (!createResult.success) {
-                    console.log(`PTT yaratilmadi: ${student.id}`);
-
-                    const log = {
-                        studentId: student.id,
-                        reason: createResult.message,
-                        time: new Date().toISOString()
-                    };
-
-                    try {
-                        logId = await updateLogsService(logId, {
-                            student_id: Number(student.student_id),
-                            step: PROCESS_STEPS.FIRST_STEP,
-                            status: PROCESS_STATUS.ERROR,
-                            unique_string: `student_${student.id}_ptt_${pttId}`
-                        });
-                    } catch (logError) {
-                        console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
-                    }
-
-                    fs.appendFileSync(
-                        'logs/failed_students_first_step.jsonl',
-                        JSON.stringify(log) + "\n"
-                    );
-
-                    continue;
-                }
-
-                pttId = createResult.pttId;
-                pttNumber = createResult.pttNumber;
-                subjects = createResult.subjects;
-
-                try {
-                    logId = await updateLogsService(logId, {
-                        student_id: Number(student.student_id),
-                        step: PROCESS_STEPS.FIRST_STEP,
-                        status: PROCESS_STATUS.FINISH,
-                        unique_string: `student_${student.id}_ptt_${pttId}`
-                    });
-                } catch (logError) {
-                    console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
-                }
-
-                const successLog = {
-                    studentId: student.id,
-                    pttId: pttId,
-                    pttNumber: pttNumber,
-                    subjects: subjects,
-                    logId: logId,
-                    time: new Date().toISOString()
-                };
-
-                fs.appendFileSync(
-                    'logs/created_ptt.jsonl',
-                    JSON.stringify(successLog) + "\n"
-                );
-
-                processedStudents.set(student.id, {
-                    pttId,
-                    pttNumber,
-                    subjects: subjects,
-                    logId: logId
-                });
-
-            } else {
-                const existing = processedStudents.get(student.id);
-
-                pttId = existing.pttId;
-                pttNumber = existing.pttNumber;
-                subjects = existing.subjects;
-
-                console.log(`1-bosqich tashlab o'tildi, sababi bu talaba uchun qaydnoma allaqachon yaratilgan edi. Talaba IDsi: ${student.id} Qaydnoma IDsi: ${pttId} Qaydnoma raqami: ${pttNumber} Log IDsi: ${logId}`);
-            }
-
-            // 2-bosqich - Qaydnomaga o'qituvchi biriktirish
-            if (!editedPTTsList.has(pttId)) {
-                try {
-                    logId = await updateLogsService(logId, {
-                        student_id: Number(student.student_id),
-                        step: PROCESS_STEPS.SECOND_STEP,
-                        status: PROCESS_STATUS.START,
-                        unique_string: `student_${student.id}_ptt_${pttId}`
-                    });
-                } catch (logError) {
-                    console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
-                }
-
-                const editResult = await editPttService(adminPage, student, pttId);
-
-                if (!editResult.success) {
-                    console.log(`Qaydnomaga o'qituvchi biriktirishda xatolik sodir bo'ldi: ${student.id}`);
-
-                    try {
-                        logId = await updateLogsService(logId, {
-                            student_id: Number(student.student_id),
-                            step: PROCESS_STEPS.SECOND_STEP,
-                            status: PROCESS_STATUS.ERROR,
-                            unique_string: `student_${student.id}_ptt_${pttId}`
-                        });
-                    } catch (logError) {
-                        console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
-                    }
-
-                    const log = {
-                        studentId: student.id,
-                        pttId: pttId,
-                        pttNumber: pttNumber,
-                        editedSubjects: editResult.subjects,
-                        reason: editResult.message,
-                        time: new Date().toISOString()
-                    };
-
-                    fs.appendFileSync(
-                        'logs/failed_students_second_step.jsonl',
-                        JSON.stringify(log) + "\n"
-                    );
-
-                    continue;
-                }
-
-                editedSubjects = editResult.subjects;
-
-                try {
-                    logId = await updateLogsService(logId, {
-                        student_id: Number(student.student_id),
-                        step: PROCESS_STEPS.SECOND_STEP,
-                        status: PROCESS_STATUS.FINISH,
-                        unique_string: `student_${student.id}_ptt_${pttId}`
-                    });
-                } catch (logError) {
-                    console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
-                }
-
-                const successLog = {
-                    studentId: student.id,
-                    pttId: pttId,
-                    pttNumber: pttNumber,
-                    editedSubjects: editedSubjects,
-                    time: new Date().toISOString()
-                };
-
-                fs.appendFileSync(
-                    'logs/edited_ptt.jsonl',
-                    JSON.stringify(successLog) + "\n"
-                );
-
-                editedPTTsList.set(pttId, {
-                    studentId: student.id,
-                    pttId: pttId,
-                    pttNumber: pttNumber,
-                    editedSubjects: editedSubjects,
-                });
-
-                console.log(`Qaydnomaga o'qituvchi biriktirish tugatildi: ${editResult.message}`);
-            } else {
-                const existing = editedPTTsList.get(pttId);
-
-                editedSubjects = existing.editedSubjects;
-
-                console.log(`2-bosqich tashlab o'tildi. Talaba IDsi: ${student.id} Qaydnoma IDsi: ${pttId} Qaydnoma raqami: ${pttNumber}`);
-            }
-
-            // 3-bosqich - Qaydnomani tasdiqlab, rahbariyatga yuborish.
-            if (!approvedPTTsList.has(pttId)) {
-                try {
-                    logId = await updateLogsService(logId, {
-                        student_id: Number(student.student_id),
-                        step: PROCESS_STEPS.THIRD_STEP,
-                        status: PROCESS_STATUS.START,
-                        unique_string: `student_${student.id}_ptt_${pttId}`
-                    });
-                } catch (logError) {
-                    console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
-                }
-
-                const approveResult = await approvePttService(adminPage, student, pttId);
-
-                if (!approveResult.success) {
-                    console.log(`Qaydnomani tasdiqlashda xatolik sodir bo'ldi: ${student.id}`);
-
-                    try {
-                        logId = await updateLogsService(logId, {
-                            student_id: Number(student.student_id),
-                            step: PROCESS_STEPS.THIRD_STEP,
-                            status: PROCESS_STATUS.ERROR,
-                            unique_string: `student_${student.id}_ptt_${pttId}`
-                        });
-                    } catch (logError) {
-                        console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
-                    }
-
-                    const log = {
-                        studentId: student.id,
-                        pttId: pttId,
-                        pttNumber: pttNumber,
-                        reason: approveResult.message,
-                        time: new Date().toISOString()
-                    };
-
-                    fs.appendFileSync(
-                        'logs/failed_students_third_step.jsonl',
-                        JSON.stringify(log) + "\n"
-                    );
-
-                    continue;
-                }
-
-                try {
-                    logId = await updateLogsService(logId, {
-                        student_id: Number(student.student_id),
-                        step: PROCESS_STEPS.THIRD_STEP,
-                        status: PROCESS_STATUS.FINISH,
-                        unique_string: `student_${student.id}_ptt_${pttId}`
-                    });
-                } catch (logError) {
-                    console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
-                }
-
-                const successLog = {
-                    studentId: student.id,
-                    pttId: pttId,
-                    pttNumber: pttNumber,
-                    time: new Date().toISOString()
-                };
-
-                fs.appendFileSync(
-                    'logs/approved_ptt.jsonl',
-                    JSON.stringify(successLog) + "\n"
-                );
-
-                approvedPTTsList.set(pttId, {
-                    studentId: student.id,
-                    pttId: pttId,
-                    pttNumber: pttNumber
-                });
-
-                console.log(`Qaydnomani tasdiqlash: ${approveResult.message}`);
-            } else {
-                // const existing = editedPTTsList.get(pttId);
-                //
-                // pttId = existing.pttId;
-                // pttNumber = existing.pttNumber;
-
-                console.log(`3-bosqich tashlab o'tildi. Talaba IDsi: ${student.id} Qaydnoma IDsi: ${pttId} Qaydnoma raqami: ${pttNumber}`);
-            }
-
-            // 4-bosqich - Qaydnomani tasdiqlab, o'qituvchiga yuborish
-            if (!checkedPTTsList.has(pttId)) {
-                try {
-                    logId = await updateLogsService(logId, {
-                        student_id: Number(student.student_id),
-                        step: PROCESS_STEPS.FOURTH_STEP,
-                        status: PROCESS_STATUS.START,
-                        unique_string: `student_${student.id}_ptt_${pttId}`
-                    });
-                } catch (logError) {
-                    console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
-                }
-
-                const checkResult = await checkPttService(checkPage, student.id, pttId);
-
-                if (!checkResult.success) {
-                    console.log(`Qaydnomani tasdiqlashda xatolik sodir bo'ldi: ${student.id}`);
-
-                    try {
-                        logId = await updateLogsService(logId, {
-                            student_id: Number(student.student_id),
-                            step: PROCESS_STEPS.FOURTH_STEP,
-                            status: PROCESS_STATUS.ERROR,
-                            unique_string: `student_${student.id}_ptt_${pttId}`
-                        });
-                    } catch (logError) {
-                        console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
-                    }
-
-                    const log = {
-                        studentId: student.id,
-                        pttId: pttId,
-                        pttNumber: pttNumber,
-                        reason: checkResult.message,
-                        time: new Date().toISOString()
-                    };
-
-                    fs.appendFileSync(
-                        'logs/failed_students_fourth_step.jsonl',
-                        JSON.stringify(log) + "\n"
-                    );
-
-                    continue;
-                }
-
-                try {
-                    logId = await updateLogsService(logId, {
-                        student_id: Number(student.student_id),
-                        step: PROCESS_STEPS.FOURTH_STEP,
-                        status: PROCESS_STATUS.FINISH,
-                        unique_string: `student_${student.id}_ptt_${pttId}`
-                    });
-                } catch (logError) {
-                    console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
-                }
-
-                const successLog = {
-                    studentId: student.id,
-                    pttId: pttId,
-                    pttNumber: pttNumber,
-                    time: new Date().toISOString()
-                };
-
-                fs.appendFileSync(
-                    'logs/checked_ptt.jsonl',
-                    JSON.stringify(successLog) + "\n"
-                );
-
-                checkedPTTsList.set(pttId, {
-                    studentId: student.id,
-                    pttId: pttId,
-                    pttNumber: pttNumber,
-                });
-
-                console.log(`Qaydnomani tasdiqlash: ${checkResult.message}`);
-            } else {
-                // const existing = checkedPTTsList.get(pttId);
-                //
-                // pttId = existing.pttId;
-                // pttNumber = existing.pttNumber;
-
-                console.log(`4-bosqich tashlab o'tildi. Talaba IDsi: ${student.id} Qaydnoma IDsi: ${pttId} Qaydnoma raqami: ${pttNumber}`);
-            }
-
-            // 5-bosqich - Baxolarni qo'yish
-            for (const [index, selectedSubject] of subjects.entries()) {
-                if (!studentGradesList.has(selectedSubject.pttFillId)) {
-                    if (index === 0) {
-                        try {
-                            logId = await updateLogsService(logId, {
-                                student_id: Number(student.student_id),
-                                step: PROCESS_STEPS.FIFTH_STEP,
-                                status: PROCESS_STATUS.START,
-                                unique_string: `student_${student.id}_ptt_${pttId}`
-                            });
-                        } catch (logError) {
-                            console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
-                        }
-                    }
-
-                    let gradeLogId = null;
-                    try {
-                        gradeLogId = await gradeLogsService(logId, {
-                            student_semestr_subject_id: selectedSubject.id,
-                            grade: selectedSubject.grade,
-                            status: PROCESS_STATUS.START
-                        });
-                    } catch (logError) {
-                        console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
-                    }
-
-                    const fillGradesResult = await fillGradesService(teacherPage, selectedSubject);
-
-                    if (!fillGradesResult.success) {
-                        console.log(`Qaydnomaga baxoni ko'chirishda xatolik sodir bo'ldi: ${selectedSubject.pttFillId}`);
-
-                        try {
-                            logId = await updateLogsService(logId, {
-                                student_id: Number(student.student_id),
-                                step: PROCESS_STEPS.FIFTH_STEP,
-                                status: PROCESS_STATUS.ERROR,
-                                unique_string: `student_${student.id}_ptt_${pttId}`
-                            });
-                        } catch (logError) {
-                            console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
-                        }
-
-                        try {
-                            gradeLogId = await updateGradeLogsService(gradeLogId, {
-                                grade: selectedSubject.grade,
-                                status: PROCESS_STATUS.ERROR
-                            });
-                        } catch (logError) {
-                            console.error(`updateGradeLogsService xatolik (student ${student.id}):`, logError.message);
-                        }
-
-                        const log = {
-                            id: selectedSubject.pttFillId,
-                            studentId: student.id,
-                            pttId: pttId,
-                            pttNumber: pttNumber,
-                            subject: selectedSubject,
-                            logId: logId,
-                            gradeLogId: gradeLogId,
-                            reason: fillGradesResult.message,
-                            time: new Date().toISOString()
-                        };
-
-                        fs.appendFileSync(
-                            'logs/failed_students_fifth_step.jsonl',
-                            JSON.stringify(log) + "\n"
-                        );
-
-                        continue;
-                    }
-
-                    if (index === subjects.length - 1) {
-                        try {
-                            logId = await updateLogsService(logId, {
-                                student_id: Number(student.student_id),
-                                step: PROCESS_STEPS.FIFTH_STEP,
-                                status: PROCESS_STATUS.FINISH,
-                                unique_string: `student_${student.id}_ptt_${pttId}`
-                            });
-                        } catch (logError) {
-                            console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
-                        }
-                    }
-
-                    try {
-                        gradeLogId = await updateGradeLogsService(gradeLogId, {
-                            grade: selectedSubject.grade,
-                            status: PROCESS_STATUS.FINISH
-                        });
-                    } catch (logError) {
-                        console.error(`updateGradeLogsService xatolik (student ${student.id}):`, logError.message);
-                    }
-
-                    const successLog = {
-                        id: selectedSubject.pttFillId,
-                        studentId: student.id,
-                        pttId: pttId,
-                        pttNumber: pttNumber,
-                        subject: selectedSubject,
-                        logId: logId,
-                        gradeLogId: gradeLogId,
-                        time: new Date().toISOString()
-                    };
-
-                    fs.appendFileSync(
-                        'logs/student_grades.jsonl',
-                        JSON.stringify(successLog) + "\n"
-                    );
-
-                    studentGradesList.set(selectedSubject.pttFillId, {
-                        id: selectedSubject.pttFillId,
-                        studentId: student.id,
-                        pttId: pttId,
-                        pttNumber: pttNumber,
-                        logId: logId,
-                        gradeLogId: gradeLogId,
-                        subject: selectedSubject,
-                    });
-
-                    console.log(`Baxo ko'chirib qo'yildi: ${fillGradesResult.message}`);
-                } else {
-                    console.log(
-                        `5-bosqich tashlab o'tildi.
-                        Talaba IDsi: ${student.id}
-                        Qaydnoma IDsi: ${pttId}
-                        Qaydnoma raqami: ${pttNumber}
-                        Fan nomi: ${selectedSubject.name}
-                        Semestr nomi: ${selectedSubject.semesterName}
-                        Baxo sahifasi IDsi: ${selectedSubject.pttFillId}
-                    `);
-                }
-            }
-        }
+        // for (const student of students) {
+        //
+        //     console.log("-------------");
+        //     console.log(`Talaba: ${student.id}`);
+        //     let pttId = null;
+        //     let pttNumber = null;
+        //     let logId = null;
+        //     let subjects = [];
+        //     let editedSubjects = [];
+        //
+        //     if (!processedStudents.has(student.id)) {
+        //         try {
+        //             logId = await writeLogsService({
+        //                 student_id: Number(student.student_id),
+        //                 step: PROCESS_STEPS.PREPARING_TO_START,
+        //                 status: PROCESS_STATUS.START,
+        //                 unique_string: `student_${student.id}_ptt_${pttId}`
+        //             });
+        //         } catch (logError) {
+        //             console.error(`writeLogsService xatolik (student ${student.id}):`, logError.message);
+        //         }
+        //     } else {
+        //         const existing = processedStudents.get(student.id);
+        //
+        //         logId = existing.logId
+        //     }
+        //
+        //     // subject_id si yo'q bo'lgan fani bor yo'qligini tekshiramiz
+        //     let hasMissingSubjectId = false;
+        //     if (student.subjects) {
+        //         for (const subject of student.subjects) {
+        //             if (!subject.subject_id) {
+        //                 hasMissingSubjectId = true;
+        //                 break;
+        //             }
+        //         }
+        //     }
+        //
+        //     if (hasMissingSubjectId) {
+        //         try {
+        //             logId = await updateLogsService(logId, {
+        //                 student_id: Number(student.student_id),
+        //                 step: PROCESS_STEPS.PREPARING_TO_START,
+        //                 status: PROCESS_STATUS.ERROR,
+        //                 unique_string: `student_${student.id}_ptt_${pttId}`
+        //             });
+        //         } catch (logError) {
+        //             console.error(`updateLogsService(logId xatolik (student ${student.id}):`, logError.message);
+        //         }
+        //         console.log(`DIQQAT: Talaba ${student.id} dagi fanda subject_id yo'q. Ushbu talaba o'tkazib yuborilmoqda...`);
+        //         continue;
+        //     }
+        //
+        //     // 1-bosqich - Qaydnoma yaratish
+        //     if (!processedStudents.has(student.id)) {
+        //         try {
+        //             logId = await updateLogsService(logId, {
+        //                 student_id: Number(student.student_id),
+        //                 step: PROCESS_STEPS.FIRST_STEP,
+        //                 status: PROCESS_STATUS.START,
+        //                 unique_string: `student_${student.id}_ptt_${pttId}`
+        //             });
+        //         } catch (logError) {
+        //             console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
+        //         }
+        //
+        //         const createResult = await createPttService(adminPage, student);
+        //
+        //         if (!createResult.success) {
+        //             console.log(`PTT yaratilmadi: ${student.id}`);
+        //
+        //             const log = {
+        //                 studentId: student.id,
+        //                 reason: createResult.message,
+        //                 time: new Date().toISOString()
+        //             };
+        //
+        //             try {
+        //                 logId = await updateLogsService(logId, {
+        //                     student_id: Number(student.student_id),
+        //                     step: PROCESS_STEPS.FIRST_STEP,
+        //                     status: PROCESS_STATUS.ERROR,
+        //                     unique_string: `student_${student.id}_ptt_${pttId}`
+        //                 });
+        //             } catch (logError) {
+        //                 console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
+        //             }
+        //
+        //             fs.appendFileSync(
+        //                 'logs/failed_students_first_step.jsonl',
+        //                 JSON.stringify(log) + "\n"
+        //             );
+        //
+        //             continue;
+        //         }
+        //
+        //         pttId = createResult.pttId;
+        //         pttNumber = createResult.pttNumber;
+        //         subjects = createResult.subjects;
+        //
+        //         try {
+        //             logId = await updateLogsService(logId, {
+        //                 student_id: Number(student.student_id),
+        //                 step: PROCESS_STEPS.FIRST_STEP,
+        //                 status: PROCESS_STATUS.FINISH,
+        //                 unique_string: `student_${student.id}_ptt_${pttId}`
+        //             });
+        //         } catch (logError) {
+        //             console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
+        //         }
+        //
+        //         const successLog = {
+        //             studentId: student.id,
+        //             pttId: pttId,
+        //             pttNumber: pttNumber,
+        //             subjects: subjects,
+        //             logId: logId,
+        //             time: new Date().toISOString()
+        //         };
+        //
+        //         fs.appendFileSync(
+        //             'logs/created_ptt.jsonl',
+        //             JSON.stringify(successLog) + "\n"
+        //         );
+        //
+        //         processedStudents.set(student.id, {
+        //             pttId,
+        //             pttNumber,
+        //             subjects: subjects,
+        //             logId: logId
+        //         });
+        //
+        //     } else {
+        //         const existing = processedStudents.get(student.id);
+        //
+        //         pttId = existing.pttId;
+        //         pttNumber = existing.pttNumber;
+        //         subjects = existing.subjects;
+        //
+        //         console.log(`1-bosqich tashlab o'tildi, sababi bu talaba uchun qaydnoma allaqachon yaratilgan edi. Talaba IDsi: ${student.id} Qaydnoma IDsi: ${pttId} Qaydnoma raqami: ${pttNumber} Log IDsi: ${logId}`);
+        //     }
+        //
+        //     // 2-bosqich - Qaydnomaga o'qituvchi biriktirish
+        //     if (!editedPTTsList.has(pttId)) {
+        //         try {
+        //             logId = await updateLogsService(logId, {
+        //                 student_id: Number(student.student_id),
+        //                 step: PROCESS_STEPS.SECOND_STEP,
+        //                 status: PROCESS_STATUS.START,
+        //                 unique_string: `student_${student.id}_ptt_${pttId}`
+        //             });
+        //         } catch (logError) {
+        //             console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
+        //         }
+        //
+        //         const editResult = await editPttService(adminPage, student, pttId);
+        //
+        //         if (!editResult.success) {
+        //             console.log(`Qaydnomaga o'qituvchi biriktirishda xatolik sodir bo'ldi: ${student.id}`);
+        //
+        //             try {
+        //                 logId = await updateLogsService(logId, {
+        //                     student_id: Number(student.student_id),
+        //                     step: PROCESS_STEPS.SECOND_STEP,
+        //                     status: PROCESS_STATUS.ERROR,
+        //                     unique_string: `student_${student.id}_ptt_${pttId}`
+        //                 });
+        //             } catch (logError) {
+        //                 console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
+        //             }
+        //
+        //             const log = {
+        //                 studentId: student.id,
+        //                 pttId: pttId,
+        //                 pttNumber: pttNumber,
+        //                 editedSubjects: editResult.subjects,
+        //                 reason: editResult.message,
+        //                 time: new Date().toISOString()
+        //             };
+        //
+        //             fs.appendFileSync(
+        //                 'logs/failed_students_second_step.jsonl',
+        //                 JSON.stringify(log) + "\n"
+        //             );
+        //
+        //             continue;
+        //         }
+        //
+        //         editedSubjects = editResult.subjects;
+        //
+        //         try {
+        //             logId = await updateLogsService(logId, {
+        //                 student_id: Number(student.student_id),
+        //                 step: PROCESS_STEPS.SECOND_STEP,
+        //                 status: PROCESS_STATUS.FINISH,
+        //                 unique_string: `student_${student.id}_ptt_${pttId}`
+        //             });
+        //         } catch (logError) {
+        //             console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
+        //         }
+        //
+        //         const successLog = {
+        //             studentId: student.id,
+        //             pttId: pttId,
+        //             pttNumber: pttNumber,
+        //             editedSubjects: editedSubjects,
+        //             time: new Date().toISOString()
+        //         };
+        //
+        //         fs.appendFileSync(
+        //             'logs/edited_ptt.jsonl',
+        //             JSON.stringify(successLog) + "\n"
+        //         );
+        //
+        //         editedPTTsList.set(pttId, {
+        //             studentId: student.id,
+        //             pttId: pttId,
+        //             pttNumber: pttNumber,
+        //             editedSubjects: editedSubjects,
+        //         });
+        //
+        //         console.log(`Qaydnomaga o'qituvchi biriktirish tugatildi: ${editResult.message}`);
+        //     } else {
+        //         const existing = editedPTTsList.get(pttId);
+        //
+        //         editedSubjects = existing.editedSubjects;
+        //
+        //         console.log(`2-bosqich tashlab o'tildi. Talaba IDsi: ${student.id} Qaydnoma IDsi: ${pttId} Qaydnoma raqami: ${pttNumber}`);
+        //     }
+        //
+        //     // 3-bosqich - Qaydnomani tasdiqlab, rahbariyatga yuborish.
+        //     if (!approvedPTTsList.has(pttId)) {
+        //         try {
+        //             logId = await updateLogsService(logId, {
+        //                 student_id: Number(student.student_id),
+        //                 step: PROCESS_STEPS.THIRD_STEP,
+        //                 status: PROCESS_STATUS.START,
+        //                 unique_string: `student_${student.id}_ptt_${pttId}`
+        //             });
+        //         } catch (logError) {
+        //             console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
+        //         }
+        //
+        //         const approveResult = await approvePttService(adminPage, student, pttId);
+        //
+        //         if (!approveResult.success) {
+        //             console.log(`Qaydnomani tasdiqlashda xatolik sodir bo'ldi: ${student.id}`);
+        //
+        //             try {
+        //                 logId = await updateLogsService(logId, {
+        //                     student_id: Number(student.student_id),
+        //                     step: PROCESS_STEPS.THIRD_STEP,
+        //                     status: PROCESS_STATUS.ERROR,
+        //                     unique_string: `student_${student.id}_ptt_${pttId}`
+        //                 });
+        //             } catch (logError) {
+        //                 console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
+        //             }
+        //
+        //             const log = {
+        //                 studentId: student.id,
+        //                 pttId: pttId,
+        //                 pttNumber: pttNumber,
+        //                 reason: approveResult.message,
+        //                 time: new Date().toISOString()
+        //             };
+        //
+        //             fs.appendFileSync(
+        //                 'logs/failed_students_third_step.jsonl',
+        //                 JSON.stringify(log) + "\n"
+        //             );
+        //
+        //             continue;
+        //         }
+        //
+        //         try {
+        //             logId = await updateLogsService(logId, {
+        //                 student_id: Number(student.student_id),
+        //                 step: PROCESS_STEPS.THIRD_STEP,
+        //                 status: PROCESS_STATUS.FINISH,
+        //                 unique_string: `student_${student.id}_ptt_${pttId}`
+        //             });
+        //         } catch (logError) {
+        //             console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
+        //         }
+        //
+        //         const successLog = {
+        //             studentId: student.id,
+        //             pttId: pttId,
+        //             pttNumber: pttNumber,
+        //             time: new Date().toISOString()
+        //         };
+        //
+        //         fs.appendFileSync(
+        //             'logs/approved_ptt.jsonl',
+        //             JSON.stringify(successLog) + "\n"
+        //         );
+        //
+        //         approvedPTTsList.set(pttId, {
+        //             studentId: student.id,
+        //             pttId: pttId,
+        //             pttNumber: pttNumber
+        //         });
+        //
+        //         console.log(`Qaydnomani tasdiqlash: ${approveResult.message}`);
+        //     } else {
+        //         // const existing = editedPTTsList.get(pttId);
+        //         //
+        //         // pttId = existing.pttId;
+        //         // pttNumber = existing.pttNumber;
+        //
+        //         console.log(`3-bosqich tashlab o'tildi. Talaba IDsi: ${student.id} Qaydnoma IDsi: ${pttId} Qaydnoma raqami: ${pttNumber}`);
+        //     }
+        //
+        //     // 4-bosqich - Qaydnomani tasdiqlab, o'qituvchiga yuborish
+        //     if (!checkedPTTsList.has(pttId)) {
+        //         try {
+        //             logId = await updateLogsService(logId, {
+        //                 student_id: Number(student.student_id),
+        //                 step: PROCESS_STEPS.FOURTH_STEP,
+        //                 status: PROCESS_STATUS.START,
+        //                 unique_string: `student_${student.id}_ptt_${pttId}`
+        //             });
+        //         } catch (logError) {
+        //             console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
+        //         }
+        //
+        //         const checkResult = await checkPttService(checkPage, student.id, pttId);
+        //
+        //         if (!checkResult.success) {
+        //             console.log(`Qaydnomani tasdiqlashda xatolik sodir bo'ldi: ${student.id}`);
+        //
+        //             try {
+        //                 logId = await updateLogsService(logId, {
+        //                     student_id: Number(student.student_id),
+        //                     step: PROCESS_STEPS.FOURTH_STEP,
+        //                     status: PROCESS_STATUS.ERROR,
+        //                     unique_string: `student_${student.id}_ptt_${pttId}`
+        //                 });
+        //             } catch (logError) {
+        //                 console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
+        //             }
+        //
+        //             const log = {
+        //                 studentId: student.id,
+        //                 pttId: pttId,
+        //                 pttNumber: pttNumber,
+        //                 reason: checkResult.message,
+        //                 time: new Date().toISOString()
+        //             };
+        //
+        //             fs.appendFileSync(
+        //                 'logs/failed_students_fourth_step.jsonl',
+        //                 JSON.stringify(log) + "\n"
+        //             );
+        //
+        //             continue;
+        //         }
+        //
+        //         try {
+        //             logId = await updateLogsService(logId, {
+        //                 student_id: Number(student.student_id),
+        //                 step: PROCESS_STEPS.FOURTH_STEP,
+        //                 status: PROCESS_STATUS.FINISH,
+        //                 unique_string: `student_${student.id}_ptt_${pttId}`
+        //             });
+        //         } catch (logError) {
+        //             console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
+        //         }
+        //
+        //         const successLog = {
+        //             studentId: student.id,
+        //             pttId: pttId,
+        //             pttNumber: pttNumber,
+        //             time: new Date().toISOString()
+        //         };
+        //
+        //         fs.appendFileSync(
+        //             'logs/checked_ptt.jsonl',
+        //             JSON.stringify(successLog) + "\n"
+        //         );
+        //
+        //         checkedPTTsList.set(pttId, {
+        //             studentId: student.id,
+        //             pttId: pttId,
+        //             pttNumber: pttNumber,
+        //         });
+        //
+        //         console.log(`Qaydnomani tasdiqlash: ${checkResult.message}`);
+        //     } else {
+        //         // const existing = checkedPTTsList.get(pttId);
+        //         //
+        //         // pttId = existing.pttId;
+        //         // pttNumber = existing.pttNumber;
+        //
+        //         console.log(`4-bosqich tashlab o'tildi. Talaba IDsi: ${student.id} Qaydnoma IDsi: ${pttId} Qaydnoma raqami: ${pttNumber}`);
+        //     }
+        //
+        //     // 5-bosqich - Baxolarni qo'yish
+        //     for (const [index, selectedSubject] of subjects.entries()) {
+        //         if (!studentGradesList.has(selectedSubject.pttFillId)) {
+        //             if (index === 0) {
+        //                 try {
+        //                     logId = await updateLogsService(logId, {
+        //                         student_id: Number(student.student_id),
+        //                         step: PROCESS_STEPS.FIFTH_STEP,
+        //                         status: PROCESS_STATUS.START,
+        //                         unique_string: `student_${student.id}_ptt_${pttId}`
+        //                     });
+        //                 } catch (logError) {
+        //                     console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
+        //                 }
+        //             }
+        //
+        //             let gradeLogId = null;
+        //             try {
+        //                 gradeLogId = await gradeLogsService(logId, {
+        //                     student_semestr_subject_id: selectedSubject.id,
+        //                     grade: selectedSubject.grade,
+        //                     status: PROCESS_STATUS.START
+        //                 });
+        //             } catch (logError) {
+        //                 console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
+        //             }
+        //
+        //             const fillGradesResult = await fillGradesService(teacherPage, selectedSubject);
+        //
+        //             if (!fillGradesResult.success) {
+        //                 console.log(`Qaydnomaga baxoni ko'chirishda xatolik sodir bo'ldi: ${selectedSubject.pttFillId}`);
+        //
+        //                 try {
+        //                     logId = await updateLogsService(logId, {
+        //                         student_id: Number(student.student_id),
+        //                         step: PROCESS_STEPS.FIFTH_STEP,
+        //                         status: PROCESS_STATUS.ERROR,
+        //                         unique_string: `student_${student.id}_ptt_${pttId}`
+        //                     });
+        //                 } catch (logError) {
+        //                     console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
+        //                 }
+        //
+        //                 try {
+        //                     gradeLogId = await updateGradeLogsService(gradeLogId, {
+        //                         grade: selectedSubject.grade,
+        //                         status: PROCESS_STATUS.ERROR
+        //                     });
+        //                 } catch (logError) {
+        //                     console.error(`updateGradeLogsService xatolik (student ${student.id}):`, logError.message);
+        //                 }
+        //
+        //                 const log = {
+        //                     id: selectedSubject.pttFillId,
+        //                     studentId: student.id,
+        //                     pttId: pttId,
+        //                     pttNumber: pttNumber,
+        //                     subject: selectedSubject,
+        //                     logId: logId,
+        //                     gradeLogId: gradeLogId,
+        //                     reason: fillGradesResult.message,
+        //                     time: new Date().toISOString()
+        //                 };
+        //
+        //                 fs.appendFileSync(
+        //                     'logs/failed_students_fifth_step.jsonl',
+        //                     JSON.stringify(log) + "\n"
+        //                 );
+        //
+        //                 continue;
+        //             }
+        //
+        //             if (index === subjects.length - 1) {
+        //                 try {
+        //                     logId = await updateLogsService(logId, {
+        //                         student_id: Number(student.student_id),
+        //                         step: PROCESS_STEPS.FIFTH_STEP,
+        //                         status: PROCESS_STATUS.FINISH,
+        //                         unique_string: `student_${student.id}_ptt_${pttId}`
+        //                     });
+        //                 } catch (logError) {
+        //                     console.error(`updateLogsService xatolik (student ${student.id}):`, logError.message);
+        //                 }
+        //             }
+        //
+        //             try {
+        //                 gradeLogId = await updateGradeLogsService(gradeLogId, {
+        //                     grade: selectedSubject.grade,
+        //                     status: PROCESS_STATUS.FINISH
+        //                 });
+        //             } catch (logError) {
+        //                 console.error(`updateGradeLogsService xatolik (student ${student.id}):`, logError.message);
+        //             }
+        //
+        //             const successLog = {
+        //                 id: selectedSubject.pttFillId,
+        //                 studentId: student.id,
+        //                 pttId: pttId,
+        //                 pttNumber: pttNumber,
+        //                 subject: selectedSubject,
+        //                 logId: logId,
+        //                 gradeLogId: gradeLogId,
+        //                 time: new Date().toISOString()
+        //             };
+        //
+        //             fs.appendFileSync(
+        //                 'logs/student_grades.jsonl',
+        //                 JSON.stringify(successLog) + "\n"
+        //             );
+        //
+        //             studentGradesList.set(selectedSubject.pttFillId, {
+        //                 id: selectedSubject.pttFillId,
+        //                 studentId: student.id,
+        //                 pttId: pttId,
+        //                 pttNumber: pttNumber,
+        //                 logId: logId,
+        //                 gradeLogId: gradeLogId,
+        //                 subject: selectedSubject,
+        //             });
+        //
+        //             console.log(`Baxo ko'chirib qo'yildi: ${fillGradesResult.message}`);
+        //         } else {
+        //             console.log(
+        //                 `5-bosqich tashlab o'tildi.
+        //                 Talaba IDsi: ${student.id}
+        //                 Qaydnoma IDsi: ${pttId}
+        //                 Qaydnoma raqami: ${pttNumber}
+        //                 Fan nomi: ${selectedSubject.name}
+        //                 Semestr nomi: ${selectedSubject.semesterName}
+        //                 Baxo sahifasi IDsi: ${selectedSubject.pttFillId}
+        //             `);
+        //         }
+        //     }
+        // }
 
         console.log("Jarayon tugadi");
 
@@ -811,7 +799,6 @@ const updateGradeLogsService = require('./services/updateGradeLogsService');
             );
 
             process.exit();
-
         }
     }
 

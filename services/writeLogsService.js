@@ -9,7 +9,7 @@ async function getToken() {
     console.log("writeLogsService: Avtorizatsiya qilinmoqda...");
 
     const loginResponse = await axios.post(
-        'http://localhost:8040/uz/auth/login',
+        `${process.env.ISFT_BASE_URL}/uz/auth/login`,
         {
             username: process.env.ISFT_LOGIN,
             password: process.env.ISFT_PASSWORD,
@@ -41,7 +41,7 @@ async function writeLogsService(payload) {
         console.log("writeLogsService: Token", payload);
 
         const response = await axios.post(
-            'http://localhost:8040/uz/copy-student-grades-to-hemis-logs',
+            `${process.env.ISFT_BASE_URL}/uz/copy-student-grades-to-hemis-logs`,
             payload,
             {
                 headers: {
@@ -72,7 +72,7 @@ async function writeLogsService(payload) {
             const token = await getToken();
 
             const retryResponse = await axios.post(
-                'http://localhost:8040/uz/copy-student-grades-to-hemis-logs',
+                `${process.env.ISFT_BASE_URL}/uz/copy-student-grades-to-hemis-logs`,
                 payload,
                 {
                     headers: {

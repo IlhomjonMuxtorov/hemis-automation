@@ -7,7 +7,7 @@ async function getStudentsService(edu_plan_id, semester_id) {
 
     try {
         const loginResponse = await axios.post(
-            'http://localhost:8040/uz/auth/login',
+            `${process.env.ISFT_BASE_URL}/uz/auth/login`,
             {
                 username: process.env.ISFT_LOGIN,
                 password: process.env.ISFT_PASSWORD,
@@ -35,7 +35,7 @@ async function getStudentsService(edu_plan_id, semester_id) {
             console.log(`Sahifa yuklanmoqda: ${page}`);
 
             const response = await axios.get(
-                'http://localhost:8040/uz/students/get-students-with-grades',
+                `${process.env.ISFT_BASE_URL}/uz/students/get-students-with-grades`,
                 {
                     params: {
                         edu_plan_id: edu_plan_id,

@@ -1,17 +1,42 @@
 [
   {
-    "id": "138183",
+    "id": 138183,
     "student_id": 30311,
-    "semester_name": "8-semestr",
+    "hemis_student_id": 12757,
+    "name": "XUDAYXODJAYEVA LOLAXON ZUXRITDINOVNA",
     "pin": "41303890221700",
-    "subjects" : [
+    "group_name": "21-DE-06",
+    "semester_name": "9 - semestr",
+    "subjects": [
       {
-        "subject_id": 439567,
-        "student_semester_subject_id": 29131,
-        "subject_name": "Moliyaviy hisobot I",
-        "semester_name": "7-semestr",
-        "credit": 6,
-        "grade": 63
+        "subject_id": null,
+        "hemis_subject_id": 27629,
+        "student_semester_subject_id": 29107,
+        "subject_name": "Umumiy ingliz tili",
+        "semester_name": "1 - semestr",
+        "year": 2021,
+        "credit": 8,
+        "grade": 54
+      },
+      {
+        "subject_id": null,
+        "hemis_subject_id": 27646,
+        "student_semester_subject_id": 29108,
+        "subject_name": "Asosiy matematika",
+        "semester_name": "1 - semestr",
+        "year": 2021,
+        "credit": 8,
+        "grade": 52
+      },
+      {
+        "subject_id": null,
+        "hemis_subject_id": 27649,
+        "student_semester_subject_id": 29109,
+        "subject_name": "Biznes asoslari",
+        "semester_name": "1 - semestr",
+        "year": 2021,
+        "credit": 8,
+        "grade": 64
       }
     ]
   }
