@@ -39,7 +39,6 @@ async function fillStudentMissingSubjectsService(student, token = null) {
         const years = [...new Set(missingSubjects.map(s => s.year))];
 
         for (const year of years) {
-            console.log(`  - ${year}-yil fanlari HEMIS API dan olinmoqda...`);
             const hemisSubjects = await getStudentSubjectsService(token, student.hemis_student_id, year);
 
             if (hemisSubjects) {

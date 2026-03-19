@@ -73,8 +73,8 @@ const updateGradeLogsService = require('./services/updateGradeLogsService');
 
             console.log("API dan studentlar olinmoqda...");
 
-            // const studentsResult = await getStudentsService(edu_plan_id, semester_id);
-            const studentsResult = await getStudentsMockService(edu_plan_id, semester_id);
+            const studentsResult = await getStudentsService(edu_plan_id, semester_id);
+            // const studentsResult = await getStudentsMockService(edu_plan_id, semester_id);
 
             if (!studentsResult.success) {
                 console.log("Studentlarni olishda xatolik");
@@ -275,18 +275,13 @@ const updateGradeLogsService = require('./services/updateGradeLogsService');
             const fillResult = await fillStudentMissingSubjectsService(student, lmsToken);
             lmsToken = fillResult.token;
 
-            // subject_id si yo'q bo'lgan fani bor yo'qligini tekshiramiz
-            const checkResult = await checkMissingSubjectsService(student, logId, pttId);
-            logId = checkResult.logId;
-            if (checkResult.hasMissing) {
-                continue;
-            }
-
             // O'zgarish bo'lgan bo'lsa, students.json ni yangilaymiz
+            console.log("Yangilangan ma'lumotlar saqlanmoqda...");
             fs.writeFileSync(
                 './data/students.json',
                 JSON.stringify(students, null, 2)
             );
+            console.log("Saqlandi...");
 
             // 1-bosqich - Qaydnoma yaratish
             if (!processedStudents.has(student.id)) {
